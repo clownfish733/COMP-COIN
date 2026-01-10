@@ -1,6 +1,6 @@
-pub struct Mempool;
+pub struct Wallet;
 
-impl Mempool{
+impl Wallet{
     pub fn new() -> Self{
         Self
     }

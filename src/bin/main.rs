@@ -1,9 +1,15 @@
-use COMP_COIN::node::{full_node_main, bootstrap_node_main};
+use COMP_COIN::{
+    full_node_main,
+    bootstrap_node_main
+};
+
 use anyhow::{Result, anyhow};
+
 use std::{
     env,
     io::Write,
 };
+
 use log::LevelFilter;
 
 fn main() -> Result<()>{
@@ -45,15 +51,6 @@ fn main() -> Result<()>{
         .filter_level(LevelFilter::Info)
         .init();
 
-    //paramater handling
-    let load = match env::args().nth(2).as_deref(){
-        Some("load") => true, 
-        Some("new") => false,
-        Some(arg) => return Err(anyhow!("invalid arguement: '{}' expected 'new' or 'load'", arg)),
-        None => return Err(anyhow!("Missing arguement: expected: 'load' or 'new"))
-    };
-    
-
     //runtime setup
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(2)
@@ -62,8 +59,8 @@ fn main() -> Result<()>{
         .build()?;
 
     match env::args().nth(1).as_deref(){
-        Some("Bootstrap") => runtime.block_on(bootstrap_node_main(load)),
-        Some("Full-Node") => runtime.block_on(full_node_main(load)),
+        Some("Bootstrap") => runtime.block_on(bootstrap_node_main()),
+        Some("Full-Node") => runtime.block_on(full_node_main()),
         Some(arg) => return Err(anyhow!("Invalid arguement '{}' expected 'Bootstrap' or 'Full-Node'", arg)),
         None => return Err(anyhow!("Missing argument: expected: 'Bootstrap' or 'Full-Node"))
     }
