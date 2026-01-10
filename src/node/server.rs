@@ -27,6 +27,7 @@ use std::{
 
 const BOOTSTRAP_PORT: usize = 8080;
 const FULLNODE_PORT: usize = 8081;
+const BOOTSTRAP_ADDR: &str = "192.168.1.184:8080";
 
 pub async fn bootstrap_node_main() -> Result<()>{
     info!("Starting Bootstrap Node");
@@ -164,7 +165,7 @@ pub async fn full_node_main() -> Result<()>{
         }
     });
 
-    network_tx.send(NetworkCommand::Connect(format!("0.0.0.0:{}", FULLNODE_PORT).parse()?)).await?;
+    network_tx.send(NetworkCommand::Connect(BOOTSTRAP_ADDR.parse()?)).await?;
 
 
     tokio::signal::ctrl_c().await?;
