@@ -48,7 +48,7 @@ impl Verack{
 
 impl NetMessage{
     pub fn to_bytes(&self) -> Vec<u8>{
-        postcard::to_allocvec(self).expect("Failed to serialize")
+        postcard::to_allocvec(self).expect("Failed to serialize net message")
     }
 
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self>{

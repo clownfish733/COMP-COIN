@@ -88,6 +88,13 @@ impl Node{
     pub fn update_mempool(&mut self, mempool: Mempool){
         todo!("Implement updating mempool")
     }
+
+    pub fn get_next_block(&self) -> Block{
+        match self.height{
+            Some(height) => Block::new(height + 1, self.config.difficulty),
+            None => Block::new(0, self.config.difficulty)
+        }
+    }
 }
 
 
