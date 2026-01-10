@@ -10,4 +10,5 @@ pub use {
     mempool::Mempool,
     utxos::UTXOS,
     block::Block,
+    transaction::Transaction,
 };

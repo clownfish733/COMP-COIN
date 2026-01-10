@@ -1,74 +1,134 @@
 use anyhow::{Result, anyhow};
+
+use std::{net::{IpAddr, SocketAddr}, sync::Arc};
+
+use tokio::sync::RwLock;
+
 use crate::{
     block::{
-        Mempool,
-        Block,
-        UTXOS,
-        Wallet,
-    }
+        Block, Mempool, Transaction, UTXOS, Wallet
+    },
+    utils::{get_global_ip, get_local_ip}
 };
 
 use std::env;
 
 pub struct Node{
-    height: usize,
+    pub height: Option<usize>,
     pub mempool: Mempool,
     pub block_chain: Vec<Block>,
     pub config: Config,
-    pub utxos: UTXOS,
+    pub utxos: Arc<RwLock<UTXOS>>,
     pub wallet: Wallet,
 }
 
 impl Node{
-    fn new() -> Self{
+    async fn new(port: usize) -> Self{
         Self {
-            height: 0, 
+            height: None, 
             mempool: Mempool::new(), 
             block_chain: Vec::new(), 
-            config:Config::tmp_load(), 
-            utxos: UTXOS::new(), 
+            config:Config::tmp_load(port).await, 
+            utxos: Arc::new(RwLock::new(UTXOS::new())), 
             wallet: Wallet::new() 
         }
     }
 
-    fn tmp_load() -> Result<Self>{
-        Ok(Self::new())
+    async fn tmp_load(port: usize) -> Result<Self>{
+        Ok(Self::new(port).await)
     }
 
-    pub fn initialise() -> Result<Self>{
+    pub async fn initialise(port: usize) -> Result<Self>{
         match env::args().nth(2).as_deref(){
-            Some("load") => Self::tmp_load(), 
-            Some("new") => Ok(Self::new()),
+            Some("load") => Self::tmp_load(port).await, 
+            Some("new") => Ok(Self::new(port).await),
             Some(arg) => return Err(anyhow!("invalid arguement: '{}' expected 'new' or 'load'", arg)),
             None => return Err(anyhow!("Missing arguement: expected: 'load' or 'new"))
         }
     }
+
+    pub fn is_new_block(&self, block: &Block) -> bool{
+        match block.get_height(){
+            0 => {
+                if self.height != None {
+                    return false
+                };
+            }
+
+            height => {
+                match self.height{
+                    None => {
+                        return false
+                    }
+                    Some(node_height) => {
+                        if height != node_height + 1{
+                            return false
+                        }
+                    }
+                }
+            }
+        } 
+
+        block.is_valid()
+
+    }
+
+    pub fn add_block(&mut self, block: &Block){
+        todo!("Implement adding blocks to node")
+    }
+
+    pub fn is_new_transaction(&self, transaction: &Transaction) -> bool{
+        transaction.is_valid()
+    }
+
+    pub fn add_transaction(&mut self, transaction: Transaction){
+        todo!("Implement adding transaction to node")
+    }
+
+    pub fn update_mempool(&mut self, mempool: Mempool){
+        todo!("Implement updating mempool")
+    }
 }
 
 
+#[derive(Clone)]
 pub struct Config{
     version: usize,
     reward: usize,
     difficulty: usize,
     port: usize,
+    local_ip: IpAddr,
+    global_ip: IpAddr
 }
 
 impl Config{
-    fn tmp_new() -> Self{
+    async fn tmp_new() -> Self{
         Self { 
             version: 0, 
             reward: 10, 
             difficulty: 3, 
-            port: 8080
+            port: 8080,
+            local_ip: get_local_ip().unwrap(),
+            global_ip: get_global_ip().await.unwrap()
         }
     }
 
-    fn tmp_load() -> Self{
-        Self::tmp_new()
+    async fn tmp_load(port: usize) -> Self{
+        let mut config = Self::tmp_new().await;
+        config.port = port;
+        config
     }
 
     pub fn get_port(&self) -> usize{
         self.port
+    }
+
+    pub fn get_local_ip(&self) -> IpAddr{
+        self.local_ip
+    }
+
+    pub fn get_global_ip(&self) -> IpAddr{
+        self.global_ip
     }
     
 }

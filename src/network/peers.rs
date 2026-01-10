@@ -14,7 +14,9 @@ use std::{
     },
 };
 
-use super::connection_message::{ 
+use crate::node::NetworkCommand;
+
+use super::connection::{ 
     ConnectionResponse
 };
 
@@ -41,30 +43,30 @@ impl PeerManager{
         )
     }
 
-    fn insert(&mut self, network_address: SocketAddr, tx: mpsc::Sender<ConnectionResponse>){
+    pub fn insert(&mut self, network_address: SocketAddr, tx: mpsc::Sender<ConnectionResponse>){
         self.0.insert(
             network_address,
             PeerInfo::new(tx) 
         );
     }
 
-    fn remove(&mut self, network_address: &SocketAddr){
+    pub fn remove(&mut self, network_address: &SocketAddr){
         self.0.remove(network_address);
     }
 
-    fn get(&self, network_address: &SocketAddr) -> Option<PeerInfo>{
+    pub fn get(&self, network_address: &SocketAddr) -> Option<PeerInfo>{
         self.0.get(network_address).cloned()
     }
 
-    fn contains(&self, network_address: &SocketAddr) -> bool{
+    pub fn contains(&self, network_address: &SocketAddr) -> bool{
         self.0.contains_key(network_address)
     }
 
-    fn iter(&self) -> Iter<'_, SocketAddr, PeerInfo>{
+    pub fn iter(&self) -> Iter<'_, SocketAddr, PeerInfo>{
         self.0.iter()
     }
 
-    async fn send(
+    pub async fn send(
         &self, 
         network_address: &SocketAddr, 
         response: ConnectionResponse
@@ -80,8 +82,8 @@ impl PeerManager{
     }
 
     //returns option of list of failed network addressess
-    async fn broadcast(
-        &mut self,
+    pub async fn broadcast(
+        &self,
         response: ConnectionResponse
     ) -> Option<Vec<SocketAddr>>{
         let mut failed_network_address = Vec::new();
@@ -89,7 +91,7 @@ impl PeerManager{
 
         for (network_address, peer_info) in self.iter(){
             if let Err(e) =  peer_info.tx.send(response.clone()).await{
-                warn!("Unable to send to: {} : {}1", network_address, e);
+                warn!("Unable to send to: {} : {}", network_address, e);
                 failed_network_address.push(*network_address)
             }
         }
@@ -100,4 +102,9 @@ impl PeerManager{
             Some(failed_network_address)
         }
     }
+
+    pub fn get_peers(&self) -> Vec<SocketAddr>{
+        self.0.keys().cloned().collect()
+    }
+
 }

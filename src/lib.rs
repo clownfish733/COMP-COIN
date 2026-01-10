@@ -5,6 +5,7 @@ mod block;
 mod mine;
 mod network;
 mod ui;
+mod utils;
 
 pub use node::{
     full_node_main,

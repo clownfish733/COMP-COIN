@@ -29,6 +29,9 @@ pub async fn start_mining_server(
                 info!("Shutting down mining threads");
                 break;
             }
+            MineCommand::UpdateBlock => {
+                todo!("Implement updating block")
+            }
         }
     };
 

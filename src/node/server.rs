@@ -20,16 +20,84 @@ use crate::{
 };
 
 use std::{
-    sync::{
-        atomic::AtomicBool,
-        Arc,
+    net::SocketAddr, sync::{
+        Arc, atomic::AtomicBool
     }
 };
+
+const BOOTSTRAP_PORT: usize = 8080;
+const FULLNODE_PORT: usize = 8081;
 
 pub async fn bootstrap_node_main() -> Result<()>{
     info!("Starting Bootstrap Node");
 
-    todo!("Implement bootstrap main")
+     //initialising -----------------------------------------------------------------------------------
+
+    //initiating mpsc channels
+    let (miner_tx, miner_rx) = mpsc::channel::<MineCommand>(CHANNEL_SIZE);
+
+    let (network_tx, network_rx) = mpsc::channel::<NetworkCommand>(CHANNEL_SIZE);
+
+    let ui_save = Arc::new(AtomicBool::new(false));
+
+    //initiiating Node
+    let node = Arc::new(RwLock::new(Node::initialise(BOOTSTRAP_PORT).await?));
+    //spawning servers -----------------------------------------------------------------------------
+
+    //spawn network server
+    tokio::spawn({
+        let node = Arc::clone(&node);
+        let miner_tx = miner_tx.clone();
+        let nework_tx_clone = network_tx.clone();
+
+        async move {
+            if let Err(e) = start_network_server(
+                node, 
+                miner_tx, 
+                network_rx, 
+                nework_tx_clone
+            ).await{
+                error!("Network handling failed: {}", e);
+            }
+        }
+    });
+
+    //spawn UI server
+    tokio::spawn({
+        let node = Arc::clone(&node);
+        let network_tx = network_tx.clone();
+        async move{
+            if let Err(e) = start_ui_server(
+                node, 
+                network_tx, 
+                ui_save
+            ).await{
+                error!("UI handling failed: {}", e);
+            }
+        }
+    });
+
+    //spawn mining server
+    let mining_handle = tokio::spawn({
+        let node = Arc::clone(&node);
+        let network_tx = network_tx.clone();
+        async move {
+            if let Err(e) = start_mining_server(
+                node, 
+                miner_rx, 
+                network_tx).await{
+                error!("Mine handling failed: {}", e);
+            }
+        }
+    });
+
+
+    tokio::signal::ctrl_c().await?;
+    println!("");
+    info!("Shutting down ...");
+    miner_tx.send(MineCommand::Stop).await?;
+    mining_handle.await?;
+    Ok(())
 }
 
 pub async fn full_node_main() -> Result<()>{
@@ -45,7 +113,7 @@ pub async fn full_node_main() -> Result<()>{
     let ui_save = Arc::new(AtomicBool::new(false));
 
     //initiiating Node
-    let node = Arc::new(RwLock::new(Node::initialise()?));
+    let node = Arc::new(RwLock::new(Node::initialise(FULLNODE_PORT).await?));
 
     //spawning servers -----------------------------------------------------------------------------
 
@@ -53,8 +121,15 @@ pub async fn full_node_main() -> Result<()>{
     tokio::spawn({
         let node = Arc::clone(&node);
         let miner_tx = miner_tx.clone();
+        let nework_tx_clone = network_tx.clone();
+
         async move {
-            if let Err(e) = start_network_server(node, miner_tx, network_rx).await{
+            if let Err(e) = start_network_server(
+                node, 
+                miner_tx, 
+                network_rx, 
+                nework_tx_clone
+            ).await{
                 error!("Network handling failed: {}", e);
             }
         }
@@ -65,7 +140,11 @@ pub async fn full_node_main() -> Result<()>{
         let node = Arc::clone(&node);
         let network_tx = network_tx.clone();
         async move{
-            if let Err(e) = start_ui_server(node, network_tx, ui_save).await{
+            if let Err(e) = start_ui_server(
+                node, 
+                network_tx, 
+                ui_save
+            ).await{
                 error!("UI handling failed: {}", e);
             }
         }
@@ -76,11 +155,16 @@ pub async fn full_node_main() -> Result<()>{
         let node = Arc::clone(&node);
         let network_tx = network_tx.clone();
         async move {
-            if let Err(e) = start_mining_server(node, miner_rx, network_tx).await{
+            if let Err(e) = start_mining_server(
+                node, 
+                miner_rx, 
+                network_tx).await{
                 error!("Mine handling failed: {}", e);
             }
         }
     });
+
+    network_tx.send(NetworkCommand::Connect(format!("0.0.0.0:{}", FULLNODE_PORT).parse()?)).await?;
 
 
     tokio::signal::ctrl_c().await?;

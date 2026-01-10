@@ -1,4 +1,4 @@
-const CHANNEL_SIZE: usize = 100;
+pub const CHANNEL_SIZE: usize = 100;
 
 use tokio::{
     sync::{RwLock, mpsc},
@@ -19,9 +19,10 @@ use crate::node::{
     MineCommand,
 };
 
-use super::connection_message::{
-    ConnectionEvent,
-    ConnectionResponse,
+use super::{
+    connection::{ConnectionEvent,ConnectionResponse, connection_receiver, connection_sender},
+    protocol_handling::protocal_handling,
+    command_handling::command_handling,
 };
 
 use super::peers::PeerManager;
@@ -30,6 +31,7 @@ pub async fn start_network_server(
     node: Arc<RwLock<Node>>,
     miner_tx: mpsc::Sender<MineCommand>,
     mut network_rx: mpsc::Receiver<NetworkCommand>,
+    network_tx: mpsc::Sender<NetworkCommand>
 ) -> Result<()>{
 
     info!("Started Network Server");
@@ -44,12 +46,77 @@ pub async fn start_network_server(
     let peer_manager = Arc::new(RwLock::new(PeerManager::new()));
     let (event_tx, event_rx) = mpsc::channel::<ConnectionEvent>(CHANNEL_SIZE);
 
+    tokio::spawn({
+        let peer_manager_clone = Arc::clone(&peer_manager);
+        let node_clone = Arc::clone(&node);
+        let miner_tx_clone = miner_tx.clone();
+        let network_tx_clone = network_tx.clone();
+
+        async {
+            protocal_handling(
+                event_rx, 
+                peer_manager_clone, 
+                node_clone, 
+                miner_tx_clone, 
+                network_tx_clone
+            )
+            .await
+            .expect("Error protocol handling")
+        }
+    });
+
+
+    tokio::spawn({  
+        let peer_manager_clone = Arc::clone(&peer_manager);
+        let node_clone = Arc::clone(&node);
+        let miner_tx_clone = miner_tx.clone();
+        let event_tx_clone = event_tx.clone();
+        async{
+            command_handling(
+                network_rx, 
+                peer_manager_clone, 
+                node_clone, 
+                miner_tx_clone, 
+                event_tx_clone
+            )
+            .await
+            .expect("Error command handling")
+        }
+    });
+
+
+
+
     loop{
         let (stream, network_address) = listener.accept().await?;
 
         let (response_tx, response_rx) = mpsc::channel::<ConnectionResponse>(CHANNEL_SIZE);
 
+        {
+            let mut peer_manager_write = peer_manager.write().await;
+            peer_manager_write.insert(network_address, response_tx);
+        }
+
         let (reader, writer) = stream.into_split();
+
+        tokio::spawn({
+            let event_tx_clone = event_tx.clone();
+            let peer = network_address.clone();
+            async move {
+                connection_receiver(reader, peer , event_tx_clone)
+                .await
+                .expect("Error connection receiver")
+            }
+        });
+
+        tokio::spawn({
+            let peer = network_address.clone();
+            async move {
+                connection_sender(writer, response_rx, peer)
+                .await
+                .expect("Error connection sender")
+            }
+        });
 
     }
 }
