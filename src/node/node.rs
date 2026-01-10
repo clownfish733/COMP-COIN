@@ -49,6 +49,14 @@ impl Node{
         }
     }
 
+    fn incr_height(&mut self){
+        if let Some(height) = self.height{
+            self.height = Some(height + 1);
+        }else{
+            self.height = Some(1);
+        }
+    }
+
     pub fn is_new_block(&self, block: &Block) -> bool{
         match block.get_height(){
             0 => {
@@ -76,7 +84,8 @@ impl Node{
     }
 
     pub fn add_block(&mut self, block: &Block){
-        self.block_chain.push(block.clone())
+        self.block_chain.push(block.clone());
+        self.incr_height();
     }
 
     pub fn is_new_transaction(&self, transaction: &Transaction) -> bool{
