@@ -27,23 +27,23 @@ pub async fn command_handling(
     while let Some(command) = network_rx.recv().await{
         match command{
             NetworkCommand::Block(block) => {
+                if !node.read().await.is_new_block(&block){
+
+                    {
+                        let mut node_writer = node.write().await;
+                        node_writer.add_block(&block);
+                    }
+                    {
+                        let response = ConnectionResponse::message(
+                            NetMessage::NewBlock(block).to_bytes()
+                        );
+
+                        let peer_manager_read = peer_manager.read().await;
+                        peer_manager_read.broadcast(response).await;
+                    }
+                }
                 if let Err(e) = miner_tx.send(MineCommand::UpdateBlock).await{
                     error!("Error sending mining command: {}", e);
-                }
-
-                if !node.read().await.is_new_block(&block){continue;}
-
-                {
-                    let mut node_writer = node.write().await;
-                    node_writer.add_block(&block);
-                }
-                {
-                    let response = ConnectionResponse::message(
-                        NetMessage::NewBlock(block).to_bytes()
-                    );
-
-                    let peer_manager_read = peer_manager.read().await;
-                    peer_manager_read.broadcast(response).await;
                 }
 
             }
