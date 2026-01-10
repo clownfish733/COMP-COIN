@@ -76,7 +76,7 @@ impl Node{
     }
 
     pub fn add_block(&mut self, block: &Block){
-        todo!("Implement adding blocks to node")
+        self.block_chain.push(block.clone())
     }
 
     pub fn is_new_transaction(&self, transaction: &Transaction) -> bool{
