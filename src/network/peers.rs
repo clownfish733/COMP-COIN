@@ -14,8 +14,6 @@ use std::{
     },
 };
 
-use crate::node::NetworkCommand;
-
 use super::connection::{ 
     ConnectionResponse
 };

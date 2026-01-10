@@ -47,18 +47,18 @@ pub async fn start_network_server(
     let (event_tx, event_rx) = mpsc::channel::<ConnectionEvent>(CHANNEL_SIZE);
 
     tokio::spawn({
-        let peer_manager_clone = Arc::clone(&peer_manager);
-        let node_clone = Arc::clone(&node);
-        let miner_tx_clone = miner_tx.clone();
-        let network_tx_clone = network_tx.clone();
+        let peer_manager = Arc::clone(&peer_manager);
+        let node = Arc::clone(&node);
+        let miner_tx = miner_tx.clone();
+        let network_tx = network_tx.clone();
 
         async {
             protocal_handling(
                 event_rx, 
-                peer_manager_clone, 
-                node_clone, 
-                miner_tx_clone, 
-                network_tx_clone
+                peer_manager, 
+                node, 
+                miner_tx, 
+                network_tx
             )
             .await
             .expect("Error protocol handling")
@@ -67,17 +67,17 @@ pub async fn start_network_server(
 
 
     tokio::spawn({  
-        let peer_manager_clone = Arc::clone(&peer_manager);
-        let node_clone = Arc::clone(&node);
-        let miner_tx_clone = miner_tx.clone();
-        let event_tx_clone = event_tx.clone();
+        let peer_manager = Arc::clone(&peer_manager);
+        let node = Arc::clone(&node);
+        let miner_tx = miner_tx.clone();
+        let event_tx = event_tx.clone();
         async{
             command_handling(
                 network_rx, 
-                peer_manager_clone, 
-                node_clone, 
-                miner_tx_clone, 
-                event_tx_clone
+                peer_manager, 
+                node, 
+                miner_tx, 
+                event_tx
             )
             .await
             .expect("Error command handling")

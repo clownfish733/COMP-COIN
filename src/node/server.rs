@@ -49,14 +49,14 @@ pub async fn bootstrap_node_main() -> Result<()>{
     tokio::spawn({
         let node = Arc::clone(&node);
         let miner_tx = miner_tx.clone();
-        let nework_tx_clone = network_tx.clone();
+        let nework_tx = network_tx.clone();
 
         async move {
             if let Err(e) = start_network_server(
                 node, 
                 miner_tx, 
                 network_rx, 
-                nework_tx_clone
+                nework_tx
             ).await{
                 error!("Network handling failed: {}", e);
             }

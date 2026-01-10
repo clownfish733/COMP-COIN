@@ -1,4 +1,7 @@
-use std::{sync::{Arc, atomic::AtomicBool}, thread::{self, JoinHandle}};
+use std::{
+    sync::{Arc, atomic::{AtomicBool, Ordering}}, 
+    thread::{self, JoinHandle}
+};
 
 use anyhow::Result;
 
@@ -50,17 +53,34 @@ pub async fn start_mining_server(
 
     let block = node.read().await.get_next_block();
 
-    let mut handles = spawn_threads(block, Arc::clone(&stop), network_tx)
+    let mut handles = spawn_threads(
+        block, 
+        Arc::clone(&stop), 
+        network_tx.clone()
+    );
 
     
     while let Some(command) = miner_rx.recv().await{
         match command{
             MineCommand::Stop => {
                 info!("Shutting down mining threads");
+                stop.store(true, Ordering::Relaxed);
                 break;
             }
             MineCommand::UpdateBlock => {
-                todo!("Implement updating block")
+                stop.store(true, Ordering::Relaxed);
+                
+                for handle in handles{
+                    handle.join().expect("Error joining handles");
+                }
+
+                stop = Arc::new(AtomicBool::new(false));
+                let block = node.read().await.get_next_block();
+                handles = spawn_threads(
+                    block, 
+                    Arc::clone(&stop), 
+                    network_tx.clone()
+                );
             }
         }
     };

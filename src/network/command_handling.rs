@@ -72,19 +72,19 @@ pub async fn command_handling(
                         let (reader, writer) = stream.into_split();
 
                         tokio::spawn({
-                            let event_tx_clone = event_tx.clone();
-                            let peer_clone = peer.clone();
+                            let event_tx = event_tx.clone();
+                            let peer = peer.clone();
                             async move {
-                                connection_receiver(reader, peer_clone, event_tx_clone)
+                                connection_receiver(reader, peer, event_tx)
                                 .await
                                 .expect("Error connection sender")
                             }}
                         );
 
                         tokio::spawn({
-                            let peer_clone = peer.clone();
+                            let peer = peer.clone();
                             async move {
-                                connection_sender(writer, response_rx, peer_clone)
+                                connection_sender(writer, response_rx, peer)
                                 .await
                                 .expect("Error connection sender")
                             }

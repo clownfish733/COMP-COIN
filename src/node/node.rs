@@ -1,3 +1,5 @@
+const DIFFICULTY: usize = 3;
+
 use anyhow::{Result, anyhow};
 
 use std::{net::{IpAddr, SocketAddr}, sync::Arc};
@@ -113,7 +115,7 @@ impl Config{
         Self { 
             version: 0, 
             reward: 10, 
-            difficulty: 3, 
+            difficulty: DIFFICULTY, 
             port: 8080,
             local_ip: get_local_ip().unwrap(),
             global_ip: get_global_ip().await.unwrap()
