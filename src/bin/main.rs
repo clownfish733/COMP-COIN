@@ -28,14 +28,14 @@ fn main() -> Result<()>{
             
             // Color by module/target
             let target = record.target();
-            let module_color = if target.contains("network") {
-                "\x1b[35m" // Magenta for network
-            } else if target.contains("mine") {
-                "\x1b[33m" // Yellow for mining
-            } else if target.contains("ui") {
-                "\x1b[36m" // Cyan for UI
-            } else {
-                "\x1b[37m" // White for others
+            let module_color = match target {
+                t if t.contains("network") => "\x1b[35m", // Magenta for network
+                t if t.contains("mine") => "\x1b[33m",    // Yellow for mining
+                t if t.contains("ui") => "\x1b[36m",      // Cyan for UI
+                t if t.contains("block") => "\x1b[32m",   // Green for block
+                t if t.contains("node") => "\x1b[34m",    // Blue for node
+                t if t.contains("utils") => "\x1b[90m",   // Bright black/gray for utils
+                _ => "\x1b[37m",                          // White for others
             };
             
             writeln!(

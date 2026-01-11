@@ -49,11 +49,15 @@ impl Node{
         }
     }
 
+    pub fn get_height(&self) -> Option<usize>{
+        self.height
+    }
+
     fn incr_height(&mut self){
         if let Some(height) = self.height{
             self.height = Some(height + 1);
         }else{
-            self.height = Some(1);
+            self.height = Some(0);
         }
     }
 

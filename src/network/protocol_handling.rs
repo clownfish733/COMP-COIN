@@ -63,7 +63,7 @@ pub async fn protocal_handling(
 
                         {
                             let mut node_write = node.write().await;
-                            node_write.add_block(&block)
+                            node_write.add_block(&block);
                         }
 
                         if let Err(e) = miner_tx.send(MineCommand::UpdateBlock).await{

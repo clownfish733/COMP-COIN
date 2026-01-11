@@ -4,7 +4,10 @@ use log::{info, warn};
 use serde::{Serialize, Deserialize};
 use tokio::sync::mpsc; 
 
-use crate::{node::NetworkCommand, utils::{generate_nonce, get_timestamp, sha256}};
+use crate::{
+    node::NetworkCommand, 
+    utils::{format_number, generate_nonce, get_timestamp, sha256}
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Block{
@@ -62,6 +65,10 @@ impl Block{
         id: usize,
         network_tx: mpsc::Sender<NetworkCommand>
     ){
+        info!("Thread: {} started mining", &id);
+
+        let mut count: usize = 1;
+
         while !stop.load(atomic::Ordering::Relaxed){
 
             self.update_nonce();
@@ -71,10 +78,12 @@ impl Block{
                     warn!("Unable to communicate on network channel: {}", e);
                 }
             }
+            
+            if count%250_000 == 0 && id == 0{
+                info!("Each thread tried: {} blocks", format_number(count));
+            }
+            count += 1;
         }
 
     }
-
-
-
 }
