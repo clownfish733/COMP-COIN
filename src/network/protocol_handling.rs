@@ -34,7 +34,7 @@ pub async fn protocal_handling(
                 peer_manager_write.remove(&peer);
             }
             ConnectionType::Message(msg) => {
-                info!("Received: {:#?}", NetMessage::from_bytes(msg.clone()));
+                info!("Received: {:?}", NetMessage::from_bytes(msg.clone()));
                 match NetMessage::from_bytes(msg){
                     
                     Ok(NetMessage::GetBlock(index)) => {

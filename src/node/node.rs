@@ -10,7 +10,7 @@ use crate::{
     block::{
         Block, Mempool, Transaction, UTXOS, Wallet
     },
-    utils::{get_global_ip, get_local_ip}
+    utils::{get_global_ip, get_local_ip, sha256}
 };
 
 use std::env;
@@ -86,7 +86,18 @@ impl Node{
     }
 
     pub fn get_next_block(&self) -> Block{
-        Block::new(self.get_next_height(), self.config.difficulty)
+        let prev_hash = match self.block_chain.last(){
+            Some(last) => last.calculate_hash(),
+            None => sha256(b"hello world".to_vec())
+        };
+
+        Block::new(
+            self.get_next_height(),
+            self.config.difficulty,
+            self.config.version,
+            vec![],
+            prev_hash,
+        )
     }
 
     pub fn get_next_height(&self) -> usize{
