@@ -96,7 +96,6 @@ pub async fn connection_receiver(
                 return Err(e.into())
             }
         }
-        info!("Received message from: {}", &peer);
         let len = u32::from_be_bytes(len_bytes) as usize;
         let mut buf = vec![0u8; len];
         reader.read_exact(&mut buf).await?;
@@ -120,7 +119,6 @@ pub async fn connection_sender(
             }
 
             ConnectionType::Message(msg) => {
-                info!("Sending: message to {}", peer);
                 let len = (msg.len() as u32).to_be_bytes();
                 writer.write_all(&len).await?;
                 writer.write_all(&msg).await?;

@@ -7,7 +7,7 @@ use super::{
     protocol::NetMessage,
 };
 
-use crate::{node::{MineCommand, NetworkCommand, Node}};
+use crate::{mine, node::{MineCommand, NetworkCommand, Node}};
 
 use anyhow::Result;
 
@@ -33,8 +33,8 @@ pub async fn protocal_handling(
                 let mut peer_manager_write = peer_manager.write().await;
                 peer_manager_write.remove(&peer);
             }
-
             ConnectionType::Message(msg) => {
+                info!("Received: {:#?}", NetMessage::from_bytes(msg.clone()));
                 match NetMessage::from_bytes(msg){
                     
                     Ok(NetMessage::GetBlock(index)) => {
@@ -56,7 +56,10 @@ pub async fn protocal_handling(
 
                     Ok(NetMessage::NewBlock(block)) => {
                         let node_read = node.read().await;
-                        if !node_read.is_new_block(&block) {continue}
+                        if !node_read.is_new_block(&block) {
+                            warn!("Received old block");
+                            continue
+                        }
 
                         {
                             let mut node_write = node.write().await;
@@ -184,7 +187,9 @@ pub async fn protocal_handling(
 
                     Ok(NetMessage::Peers(peers)) => {
                         for peer in peers{
-                            network_tx.send(NetworkCommand::Connect(peer)).await;
+                            if let Err(e) = network_tx.send(NetworkCommand::Connect(peer)).await{
+                                warn!("Error sending network command: {}", e);
+                            }
                         }
                     }
 

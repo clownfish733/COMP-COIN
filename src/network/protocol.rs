@@ -10,7 +10,7 @@ use crate::{
     }
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum NetMessage{
     GetBlock(usize),
     NewBlock(Block),
@@ -30,7 +30,7 @@ impl NetMessage{
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Verack{
     pub index: usize,
     pub height: Option<usize>,

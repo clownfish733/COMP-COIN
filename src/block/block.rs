@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 
 use crate::{node::NetworkCommand, utils::{generate_nonce, get_timestamp, sha256}};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Block{
     height: usize,
     nonce: Vec<u8>,
