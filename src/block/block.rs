@@ -92,6 +92,10 @@ impl Block{
         self.header.get_difficulty()
     }
 
+    pub fn get_transactions(&self) -> Vec<Transaction>{
+        self.transactions.clone()
+    }
+
     fn meets_diffculty(hash: Vec<u8>, difficulty: usize) -> bool{
         hash.iter().take(difficulty).all(|&x| x == 0 )
     }

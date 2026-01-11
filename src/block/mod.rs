@@ -4,6 +4,7 @@ mod script;
 mod transaction;
 mod utxos;
 mod wallet;
+mod keys;
 
 pub use {
     wallet::Wallet,
