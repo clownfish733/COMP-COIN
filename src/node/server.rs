@@ -20,7 +20,7 @@ use crate::{
 };
 
 use std::{
-    net::SocketAddr, sync::{
+    sync::{
         Arc, atomic::AtomicBool
     }
 };

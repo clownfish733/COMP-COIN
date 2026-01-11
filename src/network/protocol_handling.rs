@@ -7,7 +7,7 @@ use super::{
     protocol::NetMessage,
 };
 
-use crate::{mine, node::{MineCommand, NetworkCommand, Node}};
+use crate::{node::{MineCommand, NetworkCommand, Node}};
 
 use anyhow::Result;
 
@@ -55,39 +55,44 @@ pub async fn protocal_handling(
                     }
 
                     Ok(NetMessage::NewBlock(block)) => {
-                        let node_read = node.read().await;
-                        if !node_read.is_new_block(&block) {
-                            warn!("Received old block");
-                            continue
-                        }
+                        let is_new = {
+                            let node_read = node.read().await;
+                            node_read.is_new_block(&block)
 
-                        {
-                            let mut node_write = node.write().await;
-                            node_write.add_block(&block);
-                        }
+                        };
 
-                        if let Err(e) = miner_tx.send(MineCommand::UpdateBlock).await{
-                            warn!("Error sending message to: {}: {}", &peer, e);
-                        }
+                        if is_new{
+                            {
+                                let mut node_write = node.write().await;
+                                node_write.add_block(&block);
+                            }
 
-                        {
-                            let response = ConnectionResponse::message(
-                                NetMessage::NewBlock(
-                                    block.clone()
-                                ).to_bytes()
-                            );
-                            let peer_manager_read = peer_manager.read().await;
-                            peer_manager_read.broadcast(response).await;
-
-                            let response = ConnectionResponse::message(
-                                NetMessage::GetBlock(
-                                    node.read().await.get_next_height()
-                                ).to_bytes()
-                            );
-                            info!("Requesting new block");
-                            if let Err(e) = peer_manager_read.send(&peer, response).await{
+                            if let Err(e) = miner_tx.send(MineCommand::UpdateBlock).await{
                                 warn!("Error sending message to: {}: {}", &peer, e);
                             }
+
+                            {   
+                                info!("Requesting next block");
+                                let response = ConnectionResponse::message(
+                                    NetMessage::NewBlock(
+                                        block.clone()
+                                    ).to_bytes()
+                                );
+                                let peer_manager_read = peer_manager.read().await;
+                                peer_manager_read.broadcast(response).await;
+
+                                let response = ConnectionResponse::message(
+                                    NetMessage::GetBlock(
+                                        node.read().await.get_next_height()
+                                    ).to_bytes()
+                                );
+                                info!("Requesting new block");
+                                if let Err(e) = peer_manager_read.send(&peer, response).await{
+                                    warn!("Error sending message to: {}: {}", &peer, e);
+                                }
+                            }
+                        }else{
+                            warn!("Old block received");
                         }
 
 

@@ -2,7 +2,7 @@ const DIFFICULTY: usize = 3;
 
 use anyhow::{Result, anyhow};
 
-use std::{net::{IpAddr, SocketAddr}, sync::Arc};
+use std::{net::{IpAddr}, sync::Arc};
 
 use tokio::sync::RwLock;
 

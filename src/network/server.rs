@@ -30,7 +30,7 @@ use super::peers::PeerManager;
 pub async fn start_network_server(
     node: Arc<RwLock<Node>>,
     miner_tx: mpsc::Sender<MineCommand>,
-    mut network_rx: mpsc::Receiver<NetworkCommand>,
+    network_rx: mpsc::Receiver<NetworkCommand>,
     network_tx: mpsc::Sender<NetworkCommand>
 ) -> Result<()>{
 
