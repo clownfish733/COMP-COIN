@@ -47,7 +47,7 @@ impl Wallet{
         }
     }
 
-    pub fn new_transaction(tx_spec: TransactionSpec) -> Transaction{
-        
+    pub fn new_transaction(tx_spec: TransactionSpec, fee: usize) -> Transaction{
+            let amount_in = tx_spec.inputs.iter().map(|input| input.value)
     }
 }
