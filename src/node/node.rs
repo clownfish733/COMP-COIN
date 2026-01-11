@@ -58,28 +58,9 @@ impl Node{
     }
 
     pub fn is_new_block(&self, block: &Block) -> bool{
-        match block.get_height(){
-            0 => {
-                if self.height != None {
-                    return false
-                };
-            }
 
-            height => {
-                match self.height{
-                    None => {
-                        return false
-                    }
-                    Some(node_height) => {
-                        if height != node_height + 1{
-                            return false
-                        }
-                    }
-                }
-            }
-        } 
-
-        block.is_valid()
+        block.is_valid() 
+        && block.get_height() == self.get_next_height()
 
     }
 
@@ -101,9 +82,14 @@ impl Node{
     }
 
     pub fn get_next_block(&self) -> Block{
-        match self.height{
-            Some(height) => Block::new(height + 1, self.config.difficulty),
-            None => Block::new(0, self.config.difficulty)
+        Block::new(self.get_next_height(), self.config.difficulty)
+    }
+
+    pub fn get_next_height(&self) -> usize{
+        if let Some(height) = self.height{
+            height + 1
+        }else{
+            0
         }
     }
 }

@@ -100,6 +100,8 @@ pub async fn connection_receiver(
         let mut buf = vec![0u8; len];
         reader.read_exact(&mut buf).await?;
 
+        info!("Received message from: {}", &peer);
+
         event_tx.send(ConnectionEvent::message(peer.clone(), buf.clone())).await?;
 
     }

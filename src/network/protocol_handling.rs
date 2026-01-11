@@ -81,10 +81,10 @@ pub async fn protocal_handling(
 
                             let response = ConnectionResponse::message(
                                 NetMessage::GetBlock(
-                                    block.get_height() + 1
+                                    node.read().await.get_next_height()
                                 ).to_bytes()
                             );
-
+                            info!("Requesting new block");
                             if let Err(e) = peer_manager_read.send(&peer, response).await{
                                 warn!("Error sending message to: {}: {}", &peer, e);
                             }
