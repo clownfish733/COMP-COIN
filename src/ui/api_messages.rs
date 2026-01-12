@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 
 use std::{
     collections::HashMap,
-    fs::File, 
+    fs::File, path::PathBuf, 
 };
 
 use anyhow::Result;
@@ -114,7 +114,9 @@ impl AddressBook{
     }
 
     pub fn save(&self){
-        let file = File::create(FILE_PATH).expect("Unable to open address book");
+        let file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join(FILE_PATH);
+        let file = File::create(file_path).expect("Unable to open address book");
         serde_json::to_writer(file, self).expect("Unable to write to address book");
 
     }

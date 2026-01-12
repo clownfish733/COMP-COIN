@@ -1,3 +1,4 @@
+use log::info;
 use serde::{Serialize, Deserialize}; 
 
 use crate::{utils::{get_timestamp, sha256}};
@@ -46,6 +47,18 @@ impl Transaction{
 
     pub fn remove_fee(&mut self){
         self.outputs.pop();
+    }
+
+    pub fn debug(&self){
+        info!("Transaction");
+        info!("Inputs:");
+        for input in self.inputs.clone(){
+            info!("\t{:?}", input);
+        }
+        info!("Outputs:");
+        for output in self.outputs.clone(){
+            info!("\t{:?}", output);
+        }
     }
 }
 

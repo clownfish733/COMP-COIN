@@ -1,4 +1,4 @@
-use std::{collections::HashMap, convert::Infallible};
+use std::{collections::HashMap, convert::Infallible, hash::Hash};
 
 use log::{info, warn};
 
@@ -65,7 +65,11 @@ impl UTXOS{
     }
 
     pub fn validate_pending_transaction(&self, tx: &Transaction) -> bool{
-        if !self.validate_scripts(&tx){return false}
+        if !self.validate_scripts(&tx){
+            tx.debug();
+            warn!("Invalid script");
+            return false
+        }
         
         self.get_input_value(tx.inputs.clone()) >= UTXOS::get_output_value(tx.outputs.clone())
     }
@@ -121,5 +125,11 @@ impl UTXOS{
             if self.calculate_fee(&transaction) != fee {return false}
         }
         return true
+    }
+}
+
+impl Default for UTXOS{
+    fn default() -> Self {
+        Self(HashMap::new())
     }
 }

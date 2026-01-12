@@ -109,7 +109,26 @@ pub async fn command_handling(
                 }
             }
 
-            NetworkCommand::Transaction(_) => {
+            NetworkCommand::Transaction(transaction) => {
+                let is_new = {
+                    node.read().await.is_new_transaction(&transaction).await
+                };
+                if is_new{
+                    {
+                    let mut node_write =  node.write().await;
+                    node_write.add_transaction(transaction.clone()).await;
+                    }
+
+                    {
+                        let response = ConnectionResponse::message(
+                            NetMessage::Transaction(transaction).to_bytes()
+                        );
+                        let peer_manager_read = peer_manager.read().await;
+                        peer_manager_read.broadcast(response).await;
+                    }
+                } else{
+                    warn!("Is old Transaction");
+                }
 
             }
         }

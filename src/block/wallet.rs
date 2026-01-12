@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use log::warn;
+use serde::{Deserialize, Serialize};
 
 use super::{
     transaction::{TxOutput, Transaction},
@@ -9,6 +10,7 @@ use super::{
     block::Block,
 };
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Wallet{
     utxos: HashMap<(Vec<u8>, usize), TxOutput>,
     funds: usize,

@@ -204,8 +204,16 @@ async function  updateStatus() {
 submit.addEventListener('click',  async () =>{
     console.log('Submit button clicked!');  //
     const feeValue = parseInt(fee.value, 10);
+
+    console.log('recipients array:', recipients);
+    console.log('address_book: ', address_book)
+
     const transaction = {
-        recipients: recipients.map(item => [address_book[item.label], item.value]),
+        recipients: recipients.map(([label, amount]) => {
+            const addr = address_book.get(label);
+            console.log(`Mapping: label="${label}", amount=${amount}, address="${addr}"`);
+            return [addr, amount];
+        }),
         fee: feeValue
     };
 

@@ -1,10 +1,17 @@
 const DIFFICULTY: usize = 3;
 
+const FILE_PATH: &str = "configs/node.json";
+
 use log::info;
 
 use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
 
-use std::{net::{IpAddr}, sync::Arc};
+use std::{
+    net::{IpAddr}, 
+    sync::Arc,
+    fs::File,
+};
 
 use tokio::sync::RwLock;
 
@@ -16,11 +23,13 @@ use crate::{
 
 use std::env;
 
+#[derive(Serialize, Deserialize)]
 pub struct Node{
     pub height: Option<usize>,
     pub mempool: Mempool,
     pub block_chain: Vec<Block>,
     pub config: Config,
+    #[serde(skip)]
     pub utxos: Arc<RwLock<UTXOS>>,
     pub wallet: Wallet,
 }
@@ -37,13 +46,24 @@ impl Node{
         }
     }
 
-    async fn tmp_load(port: usize) -> Result<Self>{
-        Ok(Self::new(port).await)
+    pub async fn load() -> Result<Self>{
+        let file = File::open(FILE_PATH)?;
+        let node: Node = serde_json::from_reader(file)?;
+        let utxo = Arc::clone(&node.utxos);
+        for block in node.block_chain.clone(){
+            utxo.write().await.add_block(&block);
+        }
+        Ok(node)
+    }
+
+    pub async fn save(&self){
+        let file = File::create(FILE_PATH).expect("Unable to open node");
+        serde_json::to_writer(file, self).expect("Unable to write node");
     }
 
     pub async fn initialise(port: usize) -> Result<Self>{
         match env::args().nth(2).as_deref(){
-            Some("load") => Self::tmp_load(port).await, 
+            Some("load") => Ok(Self::load().await.expect("Unable to load node")), 
             Some("new") => Ok(Self::new(port).await),
             Some(arg) => return Err(anyhow!("invalid arguement: '{}' expected 'new' or 'load'", arg)),
             None => return Err(anyhow!("Missing arguement: expected: 'load' or 'new"))
@@ -159,7 +179,7 @@ impl Node{
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Config{
     version: usize,
     reward: usize,

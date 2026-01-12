@@ -66,7 +66,7 @@ pub async fn start_ui_server(
     info!("Web UI running");
 
     if let Err(e) = webbrowser::open(&url){
-        warn!("Failed to open browser");
+        warn!("Failed to open browser: {}",e);
     }
 
     axum::serve(listener, app).await?;
@@ -103,6 +103,7 @@ async fn submit_transaction(
     State(state): State<AppState>, 
     Json(req): Json<TransactionRequest>
 ) -> Json<TransactionResponse>{
+    info!("Received Transaction");
     req.log();
 
     if req.calculate_total_spend() > state.node.read().await.wallet.get_funds(){
@@ -125,7 +126,7 @@ async fn submit_transaction(
     };
 
     if let Err(e) = state.network_tx.send(NetworkCommand::Transaction(transaction)).await{
-        warn!("Error Sending network command");
+        warn!("Error Sending network command: {}", e);
     };
 
     Json(TransactionResponse { 
