@@ -51,7 +51,7 @@ pub async fn start_mining_server(
 
     let mut stop = Arc::new(AtomicBool::new(false));
 
-    let block = node.read().await.get_next_block();
+    let block = node.write().await.get_next_block().await;
 
     let mut handles = spawn_threads(
         block, 
@@ -75,7 +75,7 @@ pub async fn start_mining_server(
                 }
 
                 stop = Arc::new(AtomicBool::new(false));
-                let block = node.read().await.get_next_block();
+                let block = node.write().await.get_next_block().await;
                 handles = spawn_threads(
                     block, 
                     Arc::clone(&stop), 

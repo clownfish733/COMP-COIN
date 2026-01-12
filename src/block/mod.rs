@@ -11,5 +11,5 @@ pub use {
     mempool::Mempool,
     utxos::UTXOS,
     block::Block,
-    transaction::Transaction,
+    transaction::{Transaction, TransactionSpec, OutputSpec}
 };

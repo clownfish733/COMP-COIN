@@ -1,10 +1,11 @@
 use serde::{Serialize, Deserialize}; 
 
-use crate::utils::{get_timestamp, sha256};
+use crate::{utils::{get_timestamp, sha256}};
 
 use super::{
     script::Script,
-    keys::PublicKey,
+    keys::{PublicKey,PrivateKey},
+    script::compute_sig_hash,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, Hash)]
@@ -16,10 +17,6 @@ pub struct Transaction{
 }
 
 impl Transaction{
-    pub fn is_valid(&self) -> bool{
-        return true
-    }
-
     pub fn to_bytes(&self) -> Vec<u8>{
         postcard::to_allocvec(self).expect("Failed to serialize transaction")
     }
@@ -34,7 +31,7 @@ impl Transaction{
             version,
             inputs: vec![],
             outputs: vec![TxOutput{
-                locking_script: Script::P2PKHLocking(public_key.get_public_key_hash()),
+                locking_script: Script::P2PKHLocking(public_key.to_hash()),
                 value: reward
             }]
         }
@@ -43,7 +40,7 @@ impl Transaction{
     pub fn add_fee(&mut self, public_key: PublicKey, fee: usize){
         self.outputs.push(TxOutput { 
             value: fee, 
-            locking_script: Script::P2PKHLocking(public_key.get_public_key_hash()) 
+            locking_script: Script::P2PKHLocking(public_key.to_hash()) 
         })
     }
 
@@ -68,7 +65,7 @@ pub struct TxOutput{
 
 pub struct OutputSpec{
     pub value: usize,
-    pub receipient: Vec<u8>,
+    pub recipient: Vec<u8>,
 }
 
 impl OutputSpec{
@@ -76,8 +73,15 @@ impl OutputSpec{
         TxOutput { 
             value: self.value, 
             locking_script: Script::P2PKHLocking(
-                sha256(self.receipient.clone())
+                sha256(self.recipient.clone())
             ) 
+        }
+    }
+
+    pub fn new(value: usize, recipient: Vec<u8>) -> Self{
+        Self { 
+            value, 
+            recipient 
         }
     }
 }
@@ -85,21 +89,56 @@ impl OutputSpec{
 pub struct InputSpec{
     prev: Vec<u8>,
     output_index: usize,
-    sig: Vec<u8>,
+    pub utxo: TxOutput,
 }
 
 impl InputSpec{
-    pub fn to_tx_input(&self, public_key: Vec<u8>) -> TxInput{
+    pub fn add_sig(
+        &self, 
+        public_key: Vec<u8>, 
+        private_key: PrivateKey, 
+        tx: Transaction, 
+        index: usize
+    ) -> TxInput{
         TxInput { 
             prev: self.prev.clone(), 
             output_index: self.output_index, 
-            unlocking_script: Script::P2PKHUnlocking(self.sig.clone(), public_key) 
+            unlocking_script: Script::P2PKHUnlocking(
+                private_key.sign(
+                    compute_sig_hash(
+                        &tx, 
+                        index, 
+                        &self.utxo
+                    )),
+                 public_key
+                ) 
+        }
+    }
+
+    fn to_sig_tx_input(&self) -> TxInput{
+        TxInput {
+            prev: self.prev.clone(),
+            output_index: self.output_index, 
+            unlocking_script: Script::empty() 
+        }
+    }
+
+    pub fn new(
+        prev: Vec<u8>,
+        output_index: usize,
+        utxo: TxOutput
+    ) -> Self{
+        Self { 
+            prev, 
+            output_index, 
+            utxo
         }
     }
 }
 
 pub struct TransactionSpec{
     pub public_key: PublicKey,
+    pub private_key: PrivateKey,
     pub inputs: Vec<InputSpec>,
     pub outputs: Vec<OutputSpec>,
     pub version: usize,
@@ -110,21 +149,53 @@ pub struct TransactionSpec{
 
 impl TransactionSpec{
     pub fn to_transaction(&self) -> Transaction{
-        Transaction { 
-            timestamp: get_timestamp(),
+        let mut transaction = self.to_sig_transaction();
+        
+        for index in 0..transaction.inputs.len(){
+            transaction.inputs[index].unlocking_script = Script::P2PKHUnlocking(
+                self.private_key.sign(
+                    compute_sig_hash(
+                        &transaction.clone(), 
+                        index, 
+                        &self.inputs.get(index).unwrap().utxo
+                    )),
+                 self.public_key.to_vec()
+                ) 
+        }
+        
+        transaction
+    }
 
-            version: self.version,
+    fn to_sig_transaction(&self) -> Transaction{
+        Transaction { 
+            timestamp: get_timestamp(), 
+
+            version: self.version, 
 
             inputs: self.inputs.iter().map(
                 |input| 
-                input.to_tx_input(self.public_key.get_public_key()))
-                .collect(),
+                input.to_sig_tx_input()
+            ).collect(),
 
             outputs: self.outputs.iter().map(
-                |output|
+                |output| 
                 output.to_tx_output()
-            )
-            .collect()
+            ).collect()
+        }
+    }
+
+    pub fn pre_inputs(
+        version: usize, 
+        outputs: Vec<OutputSpec>, 
+        public_key: PublicKey, 
+        private_key: PrivateKey
+    ) -> Self{
+        Self {
+            public_key, 
+            private_key, 
+            inputs: vec![], 
+            outputs, 
+            version 
         }
     }
 }

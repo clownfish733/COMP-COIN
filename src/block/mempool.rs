@@ -48,6 +48,10 @@ impl<T: Ord + Clone + Hash> HeapSet<T>{
         }
     }
 
+    fn contains(&self, item: T) -> bool{
+        self.elements.contains(&item)
+    }
+
     fn get_vec(&self) -> Vec<T>{
         self.heap.clone().into_vec()
     }
@@ -68,6 +72,16 @@ impl<T: Ord + Clone + Hash> HeapSet<T>{
             .collect();
         self.heap = BinaryHeap::from(vec)
     }
+
+    fn update(&mut self, other: Self){
+        for item in other.elements.iter(){
+            self.push(item.clone())
+        }
+    }
+
+    fn size(&self) -> usize{
+        self.elements.len()
+    }
 }
 
 
@@ -79,6 +93,10 @@ impl Mempool {
         Self(HeapSet::new())
     }
 
+    pub fn contains(&self, transaction: &Transaction) -> bool{
+        self.0.contains(TransactionWithFee::new(transaction.clone(), 0))
+    }
+
     fn push(&mut self, tx: Transaction, fee: usize){
         self.0.push(TransactionWithFee { transaction: tx, fee });
     }
@@ -87,7 +105,11 @@ impl Mempool {
         Ok(Self(HeapSet::from_vec(v)))
     }
 
-    fn to_vec(&self) -> Vec<TransactionWithFee>{
+    fn pop(&mut self) -> Option<TransactionWithFee>{
+        self.0.pop()
+    }
+
+    pub fn to_vec(&self) -> Vec<TransactionWithFee>{
         self.0.get_vec()
     }
 
@@ -100,40 +122,43 @@ impl Mempool {
         self.0.remove(set);
     }
 
-    fn add_block(&mut self, block: Block){
+    pub fn add_block(&mut self, block: &Block){
         self.remove(block.get_transactions());
     }
 
-    async fn add_transaction(
+    pub fn add_transaction(
         &mut self, 
         transaction: Transaction, 
-        utxos: Arc<RwLock<UTXOS>>
+        fee: usize
     ){
-        let fee = {
-            let utxos_read = utxos.read().await;
-            utxos_read.calculate_fee(&transaction)
-        };
         self.push(transaction, fee);
     }
 
-    async fn get_next_transactions(&mut self, utxos: Arc<RwLock<UTXOS>>, public_key: PublicKey) -> Vec<Transaction>{
-        let mut txs = Vec::new();
+    pub async fn get_next_transactions(
+        &mut self, 
+        utxos: Arc<RwLock<UTXOS>>, 
+        public_key: PublicKey,
+        reward: usize,
+        version: usize,
+    ) -> Vec<Transaction>{
+        let mut txs = vec![Transaction::reward(reward, public_key.clone(), version)];
         let mut invalid_txs = Vec::new();
 
-        let mut temp_mempool = self.0.clone();
+        let mut temp_mempool = self.clone();
 
         while txs.len() < TRANSACTIONS_PER_BLOCK{
-            let Some(TransactionWithFee{transaction: tx, fee: _fee}) = temp_mempool.pop() else{
-                self.remove(invalid_txs);
+            let Some(TransactionWithFee{transaction: mut tx, fee}) = temp_mempool.pop() else{
+                temp_mempool.remove(invalid_txs);
                 return txs
             };
 
             let is_valid = {
                 let utxos_read = utxos.read().await;
-                utxos_read.validate_pending_transaction(tx.clone())
+                utxos_read.validate_pending_transaction(&tx)
             };
 
             if is_valid{
+                tx.add_fee(public_key.clone(), fee);
                 txs.push(tx);
             }else{
                 invalid_txs.push(tx);
@@ -141,6 +166,17 @@ impl Mempool {
         }
         self.remove(invalid_txs);
         txs
+    }
+
+    pub fn update(
+        &mut self, 
+        mempool: Mempool,
+    ){
+        self.0.update(mempool.0)
+    }
+
+    pub fn size(&self) -> usize{
+        self.0.size()
     }
 }
 
@@ -163,9 +199,9 @@ impl Serialize for Mempool{
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct TransactionWithFee{
-    transaction: Transaction,
-    fee: usize,
+pub struct TransactionWithFee{
+    pub transaction: Transaction,
+    pub fee: usize,
 }
 
 impl TransactionWithFee{

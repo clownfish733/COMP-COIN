@@ -57,14 +57,14 @@ pub async fn protocal_handling(
                     Ok(NetMessage::NewBlock(block)) => {
                         let is_new = {
                             let node_read = node.read().await;
-                            node_read.is_new_block(&block)
+                            node_read.is_new_block(&block).await
 
                         };
 
                         if is_new{
                             {
                                 let mut node_write = node.write().await;
-                                node_write.add_block(&block);
+                                node_write.add_block(&block).await;
                             }
 
                             if let Err(e) = miner_tx.send(MineCommand::UpdateBlock).await{
@@ -138,10 +138,10 @@ pub async fn protocal_handling(
                     }
 
                     Ok(NetMessage::Transaction(transaction)) => {
-                        if !node.read().await.is_new_transaction(&transaction){continue;}
+                        if !node.read().await.is_new_transaction(&transaction).await{continue;}
                         {
                             let mut node_write = node.write().await;
-                            node_write.add_transaction(transaction.clone());
+                            node_write.add_transaction(transaction.clone()).await;
                         }
                         
                         {
@@ -173,7 +173,7 @@ pub async fn protocal_handling(
                     }
 
                     Ok(NetMessage::Inv(mempool)) => {
-                        node.write().await.update_mempool(mempool);
+                        node.write().await.update_mempool(mempool).await;
                     }
 
                     Ok(NetMessage::GetPeers) => {

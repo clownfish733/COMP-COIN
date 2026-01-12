@@ -1,5 +1,7 @@
 const DIFFICULTY: usize = 3;
 
+use log::info;
+
 use anyhow::{Result, anyhow};
 
 use std::{net::{IpAddr}, sync::Arc};
@@ -9,8 +11,7 @@ use tokio::sync::RwLock;
 use crate::{
     block::{
         Block, Mempool, Transaction, UTXOS, Wallet
-    },
-    utils::{get_global_ip, get_local_ip, sha256}
+    }, ui::{NodeStatus, UserStatus}, utils::{get_global_ip, get_local_ip}
 };
 
 use std::env;
@@ -53,6 +54,18 @@ impl Node{
         self.height
     }
 
+    fn get_reward(&self) -> usize{
+        self.config.reward
+    }
+
+    pub fn get_version(&self) -> usize{
+        self.config.version
+    }
+    
+    fn get_difficulty(&self) -> usize{
+        self.config.difficulty
+    }
+
     fn incr_height(&mut self){
         if let Some(height) = self.height{
             self.height = Some(height + 1);
@@ -61,51 +74,87 @@ impl Node{
         }
     }
 
-    pub fn is_new_block(&self, block: &Block) -> bool{
+    pub async fn is_new_block(&self, block: &Block) -> bool{
 
-        block.is_valid() 
+        self.utxos.read().await.validate_block(&block, self.get_reward())
         && block.get_height() == self.get_next_height()
 
     }
+    
+    fn get_prev_hash(&self) -> Vec<u8>{
+        if let Some(block) = self.block_chain.last(){
+            block.calculate_hash()
+        } else{
+            b"Hello World".to_vec()
+        }
+    }
 
-    pub fn add_block(&mut self, block: &Block){
+    pub async fn add_block(&mut self, block: &Block){
+        info!("Adding new block");
         self.block_chain.push(block.clone());
+        self.mempool.add_block(block);
+        self.wallet.add_block(block);
+        self.utxos.write().await.add_block(block);
         self.incr_height();
     }
 
-    pub fn is_new_transaction(&self, transaction: &Transaction) -> bool{
-        transaction.is_valid()
+    pub async fn is_new_transaction(&self, transaction: &Transaction) -> bool{
+        if !self.utxos.read().await.validate_pending_transaction(transaction){return false}
+
+        !self.mempool.contains(transaction)
     }
 
-    pub fn add_transaction(&mut self, transaction: Transaction){
-        todo!("Implement adding transaction to node")
+    pub async fn add_transaction(&mut self, transaction: Transaction){
+        let fee = self.utxos.read().await.calculate_fee(&transaction);
+        self.mempool.add_transaction(transaction, fee);
     }
 
-    pub fn update_mempool(&mut self, mempool: Mempool){
-        todo!("Implement updating mempool")
+    pub async fn update_mempool(&mut self, mempool: Mempool){
+        if self.utxos.read().await.validate_mempool(&mempool){
+            self.mempool.update(mempool);
+        }
     }
 
-    pub fn get_next_block(&self) -> Block{
-        let prev_hash = match self.block_chain.last(){
-            Some(last) => last.calculate_hash(),
-            None => sha256(b"hello world".to_vec())
-        };
-
+    pub async fn get_next_block(&mut self) -> Block{
+        let transactions = self.mempool.get_next_transactions(
+            Arc::clone(&self.utxos), 
+            self.wallet.get_public_key(), 
+            self.get_reward(), 
+            self.get_version()
+        ).await;
+        
         Block::new(
-            self.get_next_height(),
-            self.config.difficulty,
-            self.config.version,
-            vec![],
-            prev_hash,
+            self.get_next_height(), 
+            self.get_difficulty(), 
+            self.get_version(), 
+            transactions, 
+            self.get_prev_hash()
         )
     }
 
     pub fn get_next_height(&self) -> usize{
-        if let Some(height) = self.height{
+        if let Some(height) = self.get_height(){
             height + 1
         }else{
             0
         }
+    }
+
+    pub fn get_user_status(&self) -> UserStatus{
+        UserStatus::new(
+            self.wallet.get_funds(),
+            self.wallet.get_public_key().to_hex()
+        )
+    }
+
+    pub fn get_node_status(&self) -> NodeStatus{
+        NodeStatus::new(
+            match self.get_height() {
+                Some(height) => height,
+                None => 888888
+             }, 
+             self.mempool.size(), 
+             self.get_difficulty())
     }
 }
 

@@ -19,7 +19,7 @@ enum OpCode{
     EQUALVERIFY
 }
 
-fn compute_sig_hash(
+pub fn compute_sig_hash(
     tx: &Transaction,
     input_index: usize,
     utxo: &TxOutput,

@@ -19,11 +19,9 @@ use crate::{
     ui::start_ui_server,
 };
 
-use std::{
-    sync::{
-        Arc, atomic::AtomicBool
-    }
-};
+use std::sync::{
+        Arc, atomic::{AtomicBool, Ordering}
+    };
 
 const BOOTSTRAP_PORT: usize = 8080;
 const FULLNODE_PORT: usize = 8081;
@@ -67,6 +65,7 @@ pub async fn bootstrap_node_main() -> Result<()>{
     tokio::spawn({
         let node = Arc::clone(&node);
         let network_tx = network_tx.clone();
+        let ui_save=Arc::clone(&ui_save);
         async move{
             if let Err(e) = start_ui_server(
                 node, 
@@ -97,6 +96,7 @@ pub async fn bootstrap_node_main() -> Result<()>{
     println!("");
     info!("Shutting down ...");
     miner_tx.send(MineCommand::Stop).await?;
+    ui_save.store(true, Ordering::SeqCst);
     mining_handle.await?;
     Ok(())
 }

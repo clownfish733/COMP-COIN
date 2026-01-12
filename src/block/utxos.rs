@@ -1,9 +1,12 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::Infallible};
+
+use log::{info, warn};
 
 use super::{
     transaction::{TxOutput, Transaction, TxInput},
     block::Block,
     script::Script,
+    mempool::{Mempool,TransactionWithFee}
 };
 pub struct UTXOS(HashMap<(Vec<u8>, usize), TxOutput>);
 
@@ -36,7 +39,7 @@ impl UTXOS{
         }
     }
 
-    pub fn add_block(&mut self, block: Block){
+    pub fn add_block(&mut self, block: &Block){
         for tx in block.get_transactions(){
             self.add_transaction(tx);
         }
@@ -55,16 +58,16 @@ impl UTXOS{
         true
     }
 
-    pub fn validate_confirmend_transaction(&self, tx: Transaction) -> bool{
+    fn validate_confirmed_transaction(&self, tx: &Transaction) -> bool{
         if !self.validate_scripts(&tx){return false}
 
-        self.get_input_value(tx.inputs) == UTXOS::get_output_value(tx.outputs)
+        self.get_input_value(tx.inputs.clone()) == UTXOS::get_output_value(tx.outputs.clone())
     }
 
-    pub fn validate_pending_transaction(&self, tx: Transaction) -> bool{
+    pub fn validate_pending_transaction(&self, tx: &Transaction) -> bool{
         if !self.validate_scripts(&tx){return false}
         
-        self.get_input_value(tx.inputs) >= UTXOS::get_output_value(tx.outputs)
+        self.get_input_value(tx.inputs.clone()) >= UTXOS::get_output_value(tx.outputs.clone())
     }
 
     fn get_input_value(&self, inputs: Vec<TxInput>) -> usize{
@@ -87,15 +90,22 @@ impl UTXOS{
         && transaction.outputs[0].value == reward
     }
 
-    pub fn validate_block(&self, block: Block, reward: usize) -> bool{
+    pub fn validate_block(&self, block: &Block, reward: usize) -> bool{
         let txs = block.get_transactions();
         let Some(coinbase) = txs.get(0)else{
+            warn!("Missing coinbase");
             return false
         };
-        if !Self::is_coinbase(coinbase, reward){return false}
+        if !Self::is_coinbase(coinbase, reward){
+            warn!("Invalid coinbase");
+            return false
+        }
 
-        for tx in block.get_transactions(){
-            if !self.validate_confirmend_transaction(tx){return false}
+        for tx in &block.get_transactions()[1..]{
+            if !self.validate_confirmed_transaction(tx){
+                warn!("Invalid transction");
+                return false
+            }
         }
 
         true
@@ -103,5 +113,13 @@ impl UTXOS{
 
     pub fn calculate_fee(&self, transaction: &Transaction) -> usize{
         self.get_input_value(transaction.inputs.clone()) - Self::get_output_value(transaction.outputs.clone())
+    }
+
+    pub fn validate_mempool(&self, mempool: &Mempool) -> bool{
+        for TransactionWithFee{transaction, fee} in mempool.to_vec(){
+            if !self.validate_pending_transaction(&transaction){return false}
+            if self.calculate_fee(&transaction) != fee {return false}
+        }
+        return true
     }
 }
