@@ -50,10 +50,12 @@ impl UTXOS{
     fn validate_scripts(&self, tx: &Transaction) -> bool{
         for (index, input) in tx.inputs.iter().enumerate(){
             let Some(utxo) = self.get(&input.prev, input.output_index) else{
+                warn!("Could not get utxo: {}, {}", hex::encode(&input.prev), input.output_index);
                 return false
             };
             
             if !Script::concat(&input.unlocking_script, &utxo.locking_script).validate(&tx, index, &utxo){
+                warn!("script validation failed for script: {:?}", Script::concat(&input.unlocking_script, &utxo.locking_script));
                 return false 
             }
         }

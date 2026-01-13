@@ -1,3 +1,4 @@
+use log::warn;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Hash)]
@@ -30,7 +31,7 @@ pub fn compute_sig_hash(
     }
 
     modified_tx.inputs[input_index].unlocking_script = utxo.locking_script.clone();
-    sha256(tx.to_bytes())
+    sha256(modified_tx.to_bytes())
 }
 
 impl Script{
@@ -94,7 +95,8 @@ impl Script{
                     };
                     match public_key.verify_sig(sig_hash, signature){
                         true => stack.push(vec![1]),
-                        false => return false
+                        false => {
+                            return false}
                     }
                 }
 
@@ -103,7 +105,7 @@ impl Script{
 
         match stack.last(){
             Some(top) => top.iter().any(|&b| b != 0),
-            None => false,
+            None => {warn!("6"); return false},
         }
     }
 
