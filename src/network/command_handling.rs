@@ -58,8 +58,7 @@ pub async fn command_handling(
                     let config = node.read().await.config.clone();
 
                     !peer_manager_read.contains(&peer) 
-                    && config.get_local_ip() != peer.ip() 
-                    && config.get_global_ip() != peer.ip()
+                    && !(config.get_local_ip() == peer.ip() && config.get_port() == peer.port() as usize)
                 };
 
                 if should_connect{
