@@ -106,6 +106,8 @@ pub async fn command_handling(
                     }else{
                         warn!("Failed to connect to: {}", &peer);
                     }
+                }else{
+                    warn!("Should not connect: {}", peer);
                 }
             }
 

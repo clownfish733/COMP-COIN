@@ -2,7 +2,7 @@ const CHANNEL_SIZE: usize = 100;
 
 use anyhow::Result;
 
-use log::{info, error};
+use log::{error, info, warn};
 
 use tokio::{
     sync::{RwLock, mpsc}, time
@@ -25,7 +25,7 @@ use std::{sync::{
 
 const BOOTSTRAP_PORT: usize = 8080;
 const FULLNODE_PORT: usize = 8081;
-const BOOTSTRAP_ADDR: &str = "192.168.1.184:8080";
+const BOOTSTRAP_ADDR: &str = "192.168.1.152:8080";
 
 pub async fn bootstrap_node_main() -> Result<()>{
     info!("Starting Bootstrap Node");
@@ -36,8 +36,7 @@ pub async fn bootstrap_node_main() -> Result<()>{
     let (miner_tx, miner_rx) = mpsc::channel::<MineCommand>(CHANNEL_SIZE);
 
     let (network_tx, network_rx) = mpsc::channel::<NetworkCommand>(CHANNEL_SIZE);
-
-    let ui_save = Arc::new(AtomicBool::new(false));
+;
 
     //initiiating Node
     let node = Arc::new(RwLock::new(Node::initialise(BOOTSTRAP_PORT).await?));
@@ -61,22 +60,6 @@ pub async fn bootstrap_node_main() -> Result<()>{
         }
     });
 
-    //spawn UI server
-    tokio::spawn({
-        let node = Arc::clone(&node);
-        let network_tx = network_tx.clone();
-        let ui_save=Arc::clone(&ui_save);
-        async move{
-            if let Err(e) = start_ui_server(
-                node, 
-                network_tx, 
-                ui_save
-            ).await{
-                error!("UI handling failed: {}", e);
-            }
-        }
-    });
-
     //spawn mining server
     let mining_handle = tokio::spawn({
         let node = Arc::clone(&node);
@@ -96,10 +79,11 @@ pub async fn bootstrap_node_main() -> Result<()>{
     println!("");
     info!("Shutting down ...");
     miner_tx.send(MineCommand::Stop).await?;
-    ui_save.store(true, Ordering::SeqCst);
     mining_handle.await?;
     Ok(())
 }
+
+
 
 pub async fn full_node_main() -> Result<()>{
     info!("Starting full Node ...");
@@ -152,6 +136,10 @@ pub async fn full_node_main() -> Result<()>{
         }
     });
 
+    if let Err(e) = network_tx.send(NetworkCommand::Connect(BOOTSTRAP_ADDR.parse()?)).await{
+        warn!("Unable to send connect to bootstrap: {}",e);
+    }
+
     //spawn mining server
     let mining_handle = tokio::spawn({
         let node = Arc::clone(&node);
@@ -166,7 +154,7 @@ pub async fn full_node_main() -> Result<()>{
         }
     });
 
-    network_tx.send(NetworkCommand::Connect(BOOTSTRAP_ADDR.parse()?)).await?;
+    
 
 
     tokio::signal::ctrl_c().await?;
