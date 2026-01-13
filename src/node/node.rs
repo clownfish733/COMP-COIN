@@ -19,11 +19,6 @@ use crate::{
     block::{Block, Mempool, Transaction, UTXOS, Wallet}, 
     ui::{NodeStatus, UserStatus}, utils::{get_global_ip, get_local_ip}
 };
-
-use super::parser::Cli;
-
-use std::env;
-
 pub struct Node{
     pub height: Option<usize>,
     pub mempool: Mempool,

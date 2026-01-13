@@ -25,7 +25,7 @@ use std::{sync::{
         Arc, atomic::{AtomicBool, Ordering}
     }, time::Duration};
 
-const BOOTSTRAP_PORT: usize = 8080;
+const BOOTSTRAP_PORT: usize = 8333;
 const BOOTSTRAP_ADDR: &str = "192.168.1.152";
 
 async fn bootstrap_node_main(node: Arc<RwLock<Node>>) -> Result<()>{
@@ -78,6 +78,8 @@ async fn bootstrap_node_main(node: Arc<RwLock<Node>>) -> Result<()>{
     info!("Shutting down ...");
     miner_tx.send(MineCommand::Stop).await?;
     mining_handle.await?;
+    node.read().await.save().await?;
+    time::sleep(Duration::from_secs(1)).await;
     Ok(())
 }
 
