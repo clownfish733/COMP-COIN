@@ -1,7 +1,8 @@
 const CHANNEL_SIZE: usize = 100;
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
+use clap::Parser;
 use log::{error, info, warn};
 
 use tokio::{
@@ -10,8 +11,9 @@ use tokio::{
 
 use super::node::Node;
 use super::commands::{
-    MineCommand, NetworkCommand
+    MineCommand, NetworkCommand,
 };
+use super::parser::Cli;
 
 use crate::{
     network::start_network_server,
@@ -24,10 +26,9 @@ use std::{sync::{
     }, time::Duration};
 
 const BOOTSTRAP_PORT: usize = 8080;
-const FULLNODE_PORT: usize = 8081;
 const BOOTSTRAP_ADDR: &str = "192.168.1.152";
 
-pub async fn bootstrap_node_main() -> Result<()>{
+async fn bootstrap_node_main(node: Arc<RwLock<Node>>) -> Result<()>{
     info!("Starting Bootstrap Node");
 
      //initialising -----------------------------------------------------------------------------------
@@ -36,10 +37,7 @@ pub async fn bootstrap_node_main() -> Result<()>{
     let (miner_tx, miner_rx) = mpsc::channel::<MineCommand>(CHANNEL_SIZE);
 
     let (network_tx, network_rx) = mpsc::channel::<NetworkCommand>(CHANNEL_SIZE);
-;
 
-    //initiiating Node
-    let node = Arc::new(RwLock::new(Node::initialise(BOOTSTRAP_PORT).await?));
     //spawning servers -----------------------------------------------------------------------------
 
     //spawn network server
@@ -85,7 +83,7 @@ pub async fn bootstrap_node_main() -> Result<()>{
 
 
 
-pub async fn full_node_main() -> Result<()>{
+async fn full_node_main(node: Arc<RwLock<Node>>) -> Result<()>{
     info!("Starting full Node ...");
     
     //initialising -----------------------------------------------------------------------------------
@@ -96,9 +94,6 @@ pub async fn full_node_main() -> Result<()>{
     let (network_tx, network_rx) = mpsc::channel::<NetworkCommand>(CHANNEL_SIZE);
 
     let ui_save = Arc::new(AtomicBool::new(false));
-
-    //initiiating Node
-    let node = Arc::new(RwLock::new(Node::initialise(FULLNODE_PORT).await?));
 
     //spawning servers -----------------------------------------------------------------------------
 
@@ -168,3 +163,24 @@ pub async fn full_node_main() -> Result<()>{
     Ok(())
 }
 
+pub async fn start_server() -> Result<()>{
+    let args = Cli::parse();
+
+    let mut node = match args.operation.as_str(){
+            "load" => Node::load().await?,
+            "new" => Node::new().await,
+            _ => {return Err(anyhow!("Error: Unknown node type '{}'. Use 'bootstrap' or 'full-node'", args.operation))}
+        };
+
+    node.set_port(args.port);
+    let node = Arc::new(RwLock::new(node));
+    
+    match args.node_path.as_str(){
+        "bootstrap" => bootstrap_node_main(node).await?,
+        "full-node" => full_node_main(node).await?,
+        _ => {
+            return Err(anyhow!("Error: Unknown node type '{}'. Use 'bootstrap' or 'full-node'", args.node_path))
+        }
+    }
+    Ok(())
+}

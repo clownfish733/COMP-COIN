@@ -103,7 +103,6 @@ async fn submit_transaction(
     State(state): State<AppState>, 
     Json(req): Json<TransactionRequest>
 ) -> Json<TransactionResponse>{
-    info!("Received Transaction");
     req.log();
 
     if req.calculate_total_spend() > state.node.read().await.wallet.get_funds(){

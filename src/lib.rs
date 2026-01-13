@@ -7,7 +7,4 @@ mod network;
 mod ui;
 mod utils;
 
-pub use node::{
-    full_node_main,
-    bootstrap_node_main,
-};
+pub use node::start_server;

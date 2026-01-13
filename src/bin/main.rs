@@ -1,7 +1,4 @@
-use COMP_COIN::{
-    full_node_main,
-    bootstrap_node_main
-};
+use COMP_COIN::start_server;
 
 use anyhow::{Result, anyhow};
 
@@ -58,10 +55,6 @@ fn main() -> Result<()>{
         .enable_all()
         .build()?;
 
-    match env::args().nth(1).as_deref(){
-        Some("Bootstrap") => runtime.block_on(bootstrap_node_main()),
-        Some("Full-Node") => runtime.block_on(full_node_main()),
-        Some(arg) => return Err(anyhow!("Invalid arguement '{}' expected 'Bootstrap' or 'Full-Node'", arg)),
-        None => return Err(anyhow!("Missing argument: expected: 'Bootstrap' or 'Full-Node"))
-    }
+    runtime.block_on(start_server())?;
+    Ok(())
 }

@@ -139,8 +139,6 @@ impl Serialize for UTXOS{
             |((hash, index), output)|
             (format!("{}:{}", hex::encode(hash.clone()), index.clone()), output.clone())
         ).collect();
-        
-        println!("{:?}", &serde_utxos);
 
         serde_utxos.serialize(serializer)
     }  

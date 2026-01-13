@@ -20,6 +20,8 @@ use crate::{
     ui::{NodeStatus, UserStatus}, utils::{get_global_ip, get_local_ip}
 };
 
+use super::parser::Cli;
+
 use std::env;
 
 pub struct Node{
@@ -32,12 +34,12 @@ pub struct Node{
 }
 
 impl Node{
-    async fn new(port: usize) -> Self{
+    pub async fn new() -> Self{
         Self {
             height: None, 
             mempool: Mempool::new(), 
             block_chain: Vec::new(), 
-            config:Config::tmp_load(port).await, 
+            config:Config::tmp_new().await, 
             utxos: Arc::new(RwLock::new(UTXOS::new())), 
             wallet: Wallet::new() 
         }
@@ -70,15 +72,6 @@ impl Node{
         let file = File::create(FILE_PATH)?;
         serde_json::to_writer(file, &node_data)?;
         Ok(())
-    }
-
-    pub async fn initialise(port: usize) -> Result<Self>{
-        match env::args().nth(2).as_deref(){
-            Some("load") => Ok(Self::load().await.expect("Unable to load node")), 
-            Some("new") => Ok(Self::new(port).await),
-            Some(arg) => return Err(anyhow!("invalid arguement: '{}' expected 'new' or 'load'", arg)),
-            None => return Err(anyhow!("Missing arguement: expected: 'load' or 'new"))
-        }
     }
 
     pub fn get_height(&self) -> Option<usize>{
@@ -187,6 +180,10 @@ impl Node{
              self.mempool.size(), 
              self.get_difficulty())
     }
+
+    pub fn set_port(&mut self, port: usize){
+        self.config.set_port(port);
+    }
 }
 
 
@@ -212,14 +209,12 @@ impl Config{
         }
     }
 
-    async fn tmp_load(port: usize) -> Self{
-        let mut config = Self::tmp_new().await;
-        config.port = port;
-        config
-    }
-
     pub fn get_port(&self) -> usize{
         self.port
+    }
+
+    pub fn set_port(&mut self, port: usize){
+        self.port = port
     }
 
     pub fn get_local_ip(&self) -> IpAddr{
