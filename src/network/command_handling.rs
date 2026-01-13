@@ -122,8 +122,8 @@ pub async fn command_handling(
                 };
                 if is_new{
                     {
-                    let mut node_write =  node.write().await;
-                    node_write.add_transaction(transaction.clone()).await;
+                        let mut node_write =  node.write().await;
+                        node_write.add_transaction(transaction.clone()).await;
                     }
 
                     {

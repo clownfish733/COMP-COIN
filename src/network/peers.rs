@@ -136,17 +136,29 @@ pub async fn update_peers(peer_manager: Arc<RwLock<PeerManager>>){
     let response = ConnectionResponse::message(
         NetMessage::GetPeers.to_bytes()
     );
-    loop{
-        let peer_manager_clone = Arc::clone(&peer_manager);
-        let mut peer_manager_write_clone = peer_manager_clone.write().await;
-        for (peer, info) in peer_manager_write_clone.iter_mut(){
-            if info.check_ticker(){
-                let peer_manager_read = peer_manager.read().await;
-                if let Err(e) = peer_manager_read.send(peer, response.clone()).await{
-                    warn!("Error sending to : {}", peer);
-                }
+    loop {
+        // Collect peers that need updates
+        let peers_to_update: Vec<SocketAddr> = {
+            let mut pm = peer_manager.write().await;
+            pm.iter_mut()
+                .filter_map(|(peer, info)| {
+                    if info.check_ticker() {
+                        Some(*peer)
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        }; 
+        
+        // Send messages without holding any lock
+        for peer in peers_to_update {
+            let pm = peer_manager.read().await;
+            if let Err(e) = pm.send(&peer, response.clone()).await {
+                warn!("Error sending to: {}", peer);
             }
         }
+        
         tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     }
 }

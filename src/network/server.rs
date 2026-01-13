@@ -65,14 +65,14 @@ pub async fn start_network_server(
             .expect("Error protocol handling")
         }
     });
-
+/*
     tokio::spawn({
         let peer_manager = Arc::clone(&peer_manager);
         async{
             update_peers(peer_manager).await
         }
     });
-
+*/
 
     tokio::spawn({  
         let peer_manager = Arc::clone(&peer_manager);
