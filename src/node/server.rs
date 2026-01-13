@@ -136,10 +136,6 @@ pub async fn full_node_main() -> Result<()>{
         }
     });
 
-    if let Err(e) = network_tx.send(NetworkCommand::Connect(BOOTSTRAP_ADDR.parse()?)).await{
-        warn!("Unable to send connect to bootstrap: {}",e);
-    }
-
     //spawn mining server
     let mining_handle = tokio::spawn({
         let node = Arc::clone(&node);
@@ -154,6 +150,14 @@ pub async fn full_node_main() -> Result<()>{
         }
     });
 
+    {
+        if let Err(e) = network_tx.send(
+            NetworkCommand::Connect(
+                BOOTSTRAP_ADDR.parse()?
+            )).await{
+            warn!("Unable to send connect to bootstrap: {}",e);
+        }
+    }
     
 
 

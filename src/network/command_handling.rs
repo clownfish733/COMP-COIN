@@ -53,6 +53,7 @@ pub async fn command_handling(
             }
 
             NetworkCommand::Connect(peer) => {
+                info!("New connect command");
                 let should_connect = {
                     let peer_manager_read = peer_manager.read().await;
                     let config = node.read().await.config.clone();
