@@ -109,7 +109,6 @@ impl Node{
     }
 
     pub async fn add_block(&mut self, block: &Block){
-        info!("Adding new block");
         self.block_chain.push(block.clone());
         self.mempool.add_block(block);
         self.wallet.add_block(block);
