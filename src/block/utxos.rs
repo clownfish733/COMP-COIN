@@ -1,6 +1,7 @@
 use std::{collections::HashMap, convert::Infallible, hash::Hash};
 
 use log::{info, warn};
+use serde::{Deserialize, Serialize};
 
 use super::{
     transaction::{TxOutput, Transaction, TxInput},
@@ -8,6 +9,8 @@ use super::{
     script::Script,
     mempool::{Mempool,TransactionWithFee}
 };
+
+#[derive(Clone)]
 pub struct UTXOS(HashMap<(Vec<u8>, usize), TxOutput>);
 
 impl UTXOS{
@@ -128,8 +131,15 @@ impl UTXOS{
     }
 }
 
-impl Default for UTXOS{
-    fn default() -> Self {
-        Self(HashMap::new())
-    }
+impl Serialize for UTXOS{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer {
+        let serde_utxos: HashMap<(String, usize), TxOutput> = self.0.iter().map(
+            |((hash, index), output)|
+            ((hex::encode(hash.clone()), index.clone()), output.clone())
+        ).collect();
+        
+        serde_utxos.serialize(serializer)
+    }  
 }

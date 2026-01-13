@@ -5,7 +5,7 @@ const FILE_PATH: &str = "configs/node.json";
 use log::info;
 
 use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, ser::SerializeStruct};
 
 use std::{
     net::{IpAddr}, 
@@ -23,13 +23,11 @@ use crate::{
 
 use std::env;
 
-#[derive(Serialize, Deserialize)]
 pub struct Node{
     pub height: Option<usize>,
     pub mempool: Mempool,
     pub block_chain: Vec<Block>,
     pub config: Config,
-    #[serde(skip)]
     pub utxos: Arc<RwLock<UTXOS>>,
     pub wallet: Wallet,
 }
@@ -48,17 +46,32 @@ impl Node{
 
     pub async fn load() -> Result<Self>{
         let file = File::open(FILE_PATH)?;
-        let node: Node = serde_json::from_reader(file)?;
-        let utxo = Arc::clone(&node.utxos);
-        for block in node.block_chain.clone(){
-            utxo.write().await.add_block(&block);
-        }
-        Ok(node)
+        let node_data: NodeSerde = serde_json::from_reader(file)?;
+        Ok(Self { 
+            height: node_data.height, 
+            mempool: node_data.mempool, 
+            block_chain: node_data.block_chain, 
+            config: node_data.config, 
+            utxos: Arc::new(RwLock::new(node_data.utxos)), 
+            wallet: node_data.wallet 
+        })
     }
 
-    pub async fn save(&self){
-        let file = File::create(FILE_PATH).expect("Unable to open node");
-        serde_json::to_writer(file, self).expect("Unable to write node");
+    pub async fn save(&self) -> Result<()>{
+        let utxos = self.utxos.read().await.clone();
+
+        let node_data = NodeSerde{
+            height: self.height,
+            mempool: self.mempool.clone(),
+            block_chain: self.block_chain.clone(),
+            config: self.config.clone(),
+            utxos,
+            wallet: self.wallet.clone()
+        };
+
+        let file = File::create(FILE_PATH)?;
+        serde_json::to_writer(file, &node_data)?;
+        Ok(())
     }
 
     pub async fn initialise(port: usize) -> Result<Self>{
@@ -219,4 +232,15 @@ impl Config{
         self.global_ip
     }
     
+}
+
+
+#[derive(Serialize, Deserialize)]
+struct NodeSerde {
+    height: Option<usize>,
+    mempool: Mempool,
+    block_chain: Vec<Block>,
+    config: Config,
+    utxos: UTXOS,
+    wallet: Wallet,
 }

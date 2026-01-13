@@ -10,7 +10,7 @@ use super::{
     block::Block,
 };
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Wallet{
     utxos: HashMap<(Vec<u8>, usize), TxOutput>,
     funds: usize,

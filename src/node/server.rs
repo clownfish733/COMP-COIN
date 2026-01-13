@@ -175,7 +175,7 @@ pub async fn full_node_main() -> Result<()>{
     miner_tx.send(MineCommand::Stop).await?;
     mining_handle.await?;
     ui_save.store(true, Ordering::SeqCst);
-    node.read().await.save().await;
+    node.read().await.save().await?;
     time::sleep(Duration::from_secs(1)).await;
     Ok(())
 }
