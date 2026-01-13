@@ -25,7 +25,7 @@ use std::{sync::{
 
 const BOOTSTRAP_PORT: usize = 8080;
 const FULLNODE_PORT: usize = 8081;
-const BOOTSTRAP_ADDR: &str = "192.168.1.152:8080";
+const BOOTSTRAP_ADDR: &str = "192.168.1.152";
 
 pub async fn bootstrap_node_main() -> Result<()>{
     info!("Starting Bootstrap Node");
@@ -150,14 +150,10 @@ pub async fn full_node_main() -> Result<()>{
         }
     });
 
-    {
-        if let Err(e) = network_tx.send(
-            NetworkCommand::Connect(
-                BOOTSTRAP_ADDR.parse()?
-            )).await{
-            warn!("Unable to send connect to bootstrap: {}",e);
-        }
-    }
+    let network_tx_clone = network_tx.clone();
+    if let Err(e) = network_tx_clone.send(NetworkCommand::Connect(format!("{}:{}", BOOTSTRAP_ADDR, BOOTSTRAP_PORT).parse()?)).await{
+        warn!("unable to send on network channel: {}",e);
+    }   
     
 
 

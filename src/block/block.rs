@@ -6,9 +6,9 @@ use tokio::sync::mpsc;
 
 use super::transaction::Transaction;
 
+//delete private key import later
 use crate::{
-    node::NetworkCommand, 
-    utils::{format_number, generate_nonce, get_timestamp, sha256}
+    block::keys::{PrivateKey}, node::NetworkCommand, utils::{format_number, generate_nonce, get_timestamp, sha256}
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -177,5 +177,22 @@ impl Block{
                 Self::rec_merkle_root(stack)
             }
         }
+    }
+
+
+    //delete later
+
+    pub fn temp_block() -> Self{
+        Self { header: BlockHeader { 
+            prev_hash: b"hello world".to_vec(), 
+            merkle_root: b"Merkle_root".to_vec(), 
+            timestamp: 100, 
+            difficulty: 3, 
+            nonce: b"nonce".to_vec(), 
+            version: 0, 
+            height: 0 
+        }, 
+        transactions: vec![Transaction::reward(100, PrivateKey::new().get_public_key(), 0)]
+    }
     }
 }

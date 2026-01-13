@@ -1,8 +1,8 @@
-use std::sync::{Arc};
+use std::{sync::Arc, time::Duration};
 
-use log::{info, warn, error};
+use log::{info, warn, error, debug};
 
-use tokio::{net::TcpStream, sync::{RwLock, mpsc}};
+use tokio::{net::TcpStream, sync::{RwLock, mpsc}, time::timeout};
 
 use anyhow::Result;
 
@@ -53,7 +53,6 @@ pub async fn command_handling(
             }
 
             NetworkCommand::Connect(peer) => {
-                info!("New connect command");
                 let should_connect = {
                     let peer_manager_read = peer_manager.read().await;
                     let config = node.read().await.config.clone();
@@ -61,51 +60,57 @@ pub async fn command_handling(
                     !peer_manager_read.contains(&peer) 
                     && !(config.get_local_ip() == peer.ip() && config.get_port() == peer.port() as usize)
                 };
-
+                
                 if should_connect{
-                    if let Ok(stream) = TcpStream::connect(&peer).await{
-                        info!("Connected to: {}", &peer);
+                    match timeout(Duration::from_secs(5), TcpStream::connect(&peer)).await{
+                        Ok(Ok(stream)) => {
+                            info!("Connected to: {}", &peer);
 
-                        let (response_tx, response_rx) = mpsc::channel::<ConnectionResponse>(CHANNEL_SIZE);
+                            let (response_tx, response_rx) = mpsc::channel::<ConnectionResponse>(CHANNEL_SIZE);
 
-                        {
-                            let mut peer_manager_write = peer_manager.write().await;
-                            peer_manager_write.insert(peer.clone(), response_tx);
-                        }
-
-                        let (reader, writer) = stream.into_split();
-
-                        tokio::spawn({
-                            let event_tx = event_tx.clone();
-                            let peer = peer.clone();
-                            async move {
-                                connection_receiver(reader, peer, event_tx)
-                                .await
-                                .expect("Error connection sender")
-                            }}
-                        );
-
-                        tokio::spawn({
-                            let peer = peer.clone();
-                            async move {
-                                connection_sender(writer, response_rx, peer)
-                                .await
-                                .expect("Error connection sender")
+                            {
+                                let mut peer_manager_write = peer_manager.write().await;
+                                peer_manager_write.insert(peer.clone(), response_tx);
                             }
-                        });
 
-                        {
-                            let height = node.read().await.height;
-                            let response = ConnectionResponse::message(
-                                NetMessage::verack(0, height).to_bytes()
+                            let (reader, writer) = stream.into_split();
+
+                            tokio::spawn({
+                                let event_tx = event_tx.clone();
+                                let peer = peer.clone();
+                                async move {
+                                    connection_receiver(reader, peer, event_tx)
+                                    .await
+                                    .expect("Error connection sender")
+                                }}
                             );
-                            let peer_manager_read = peer_manager.read().await;
-                            if let Err(e) = peer_manager_read.send(&peer, response).await{
-                                warn!("Error sending message to: {}: {}", &peer, e)
+
+                            tokio::spawn({
+                                let peer = peer.clone();
+                                async move {
+                                    connection_sender(writer, response_rx, peer)
+                                    .await
+                                    .expect("Error connection sender")
+                                }
+                            });
+
+                            {
+                                let height = node.read().await.height;
+                                let response = ConnectionResponse::message(
+                                    NetMessage::verack(0, height).to_bytes()
+                                );
+                                let peer_manager_read = peer_manager.read().await;
+                                if let Err(e) = peer_manager_read.send(&peer, response).await{
+                                    warn!("Error sending message to: {}: {}", &peer, e)
+                                }
                             }
                         }
-                    }else{
-                        warn!("Failed to connect to: {}", &peer);
+                        Ok(Err(e)) => {
+                            warn!("Failed to connect to {}: {}", peer, e);
+                        }
+                        Err(_) => {
+                            warn!("Connection to {} timed out", peer);
+                        }
                     }
                 }else{
                     warn!("Should not connect: {}", peer);

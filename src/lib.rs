@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
 mod node;
-mod block;
+pub mod block;
 mod mine;
 mod network;
 mod ui;

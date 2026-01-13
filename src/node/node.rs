@@ -5,7 +5,7 @@ const FILE_PATH: &str = "configs/node.json";
 use log::info;
 
 use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize, ser::SerializeStruct};
+use serde::{Deserialize, Serialize};
 
 use std::{
     net::{IpAddr}, 
@@ -16,9 +16,8 @@ use std::{
 use tokio::sync::RwLock;
 
 use crate::{
-    block::{
-        Block, Mempool, Transaction, UTXOS, Wallet
-    }, ui::{NodeStatus, UserStatus}, utils::{get_global_ip, get_local_ip}
+    block::{Block, Mempool, Transaction, UTXOS, Wallet}, 
+    ui::{NodeStatus, UserStatus}, utils::{get_global_ip, get_local_ip}
 };
 
 use std::env;
@@ -68,7 +67,6 @@ impl Node{
             utxos,
             wallet: self.wallet.clone()
         };
-
         let file = File::create(FILE_PATH)?;
         serde_json::to_writer(file, &node_data)?;
         Ok(())
@@ -192,7 +190,7 @@ impl Node{
 }
 
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct Config{
     version: usize,
     reward: usize,
@@ -235,7 +233,7 @@ impl Config{
 }
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct NodeSerde {
     height: Option<usize>,
     mempool: Mempool,

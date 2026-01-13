@@ -1,7 +1,6 @@
-use std::{collections::HashMap, convert::Infallible, hash::Hash};
+use std::{collections::HashMap};
 
 use log::{info, warn};
-use postcard::fixint::be::deserialize;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -11,7 +10,7 @@ use super::{
     mempool::{Mempool,TransactionWithFee}
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UTXOS(HashMap<(Vec<u8>, usize), TxOutput>);
 
 impl UTXOS{
@@ -136,11 +135,13 @@ impl Serialize for UTXOS{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
-        let serde_utxos: HashMap<(String, usize), TxOutput> = self.0.iter().map(
+        let serde_utxos: HashMap<String, TxOutput> = self.0.iter().map(
             |((hash, index), output)|
-            ((hex::encode(hash.clone()), index.clone()), output.clone())
+            (format!("{}:{}", hex::encode(hash.clone()), index.clone()), output.clone())
         ).collect();
         
+        println!("{:?}", &serde_utxos);
+
         serde_utxos.serialize(serializer)
     }  
 }
@@ -149,11 +150,13 @@ impl <'de>Deserialize<'de> for UTXOS{
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: serde::Deserializer<'de> {
-        let serde_utxos = HashMap::<(String, usize), TxOutput>::deserialize(deserializer)?;
+        let serde_utxos = HashMap::<String, TxOutput>::deserialize(deserializer)?;
         let utxos = serde_utxos.iter().map(
-            |((hash, index), output)|{
+            |(key, output)|{
+
+            let (hash, index) = key.split_once(":").expect("No colon found for utxos key"); 
             let hash = hex::decode(&hash).map_err(serde::de::Error::custom)?;
-                
+            let index: usize = index.parse().expect("index not a number");
             Ok(((hash, index.clone()), output.clone()))
             }
             
