@@ -5,11 +5,3 @@ pub fn sha256(message: Vec<u8>) -> Vec<u8>{
     hasher.update(message);
     hasher.finalize().to_vec()
 }
-
-#[cfg(test)]
-pub mod test{
-    #[test]
-    fn sha256_test(){
-        
-    }
-}

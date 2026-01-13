@@ -1,6 +1,7 @@
 use std::{collections::HashMap, convert::Infallible, hash::Hash};
 
 use log::{info, warn};
+use postcard::fixint::be::deserialize;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -142,4 +143,22 @@ impl Serialize for UTXOS{
         
         serde_utxos.serialize(serializer)
     }  
+}
+
+impl <'de>Deserialize<'de> for UTXOS{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de> {
+        let serde_utxos = HashMap::<(String, usize), TxOutput>::deserialize(deserializer)?;
+        let utxos = serde_utxos.iter().map(
+            |((hash, index), output)|{
+            let hash = hex::decode(&hash).map_err(serde::de::Error::custom)?;
+                
+            Ok(((hash, index.clone()), output.clone()))
+            }
+            
+        ).collect::<Result<HashMap<_, _>, _>>()?;
+
+        Ok(Self(utxos))
+    }
 }

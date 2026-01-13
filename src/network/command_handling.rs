@@ -28,7 +28,7 @@ pub async fn command_handling(
         match command{
             NetworkCommand::Block(block) => {
                 if node.read().await.is_new_block(&block).await{
-
+                    info!("Adding new block");
                     {
                         let mut node_writer = node.write().await;
                         node_writer.add_block(&block).await;
@@ -41,6 +41,7 @@ pub async fn command_handling(
                         let peer_manager_read = peer_manager.read().await;
                         peer_manager_read.broadcast(response).await;
                     }
+        
                 }else{
                     warn!("Is Old Block");
                 }
