@@ -23,6 +23,7 @@ use super::{
     connection::{ConnectionEvent,ConnectionResponse, connection_receiver, connection_sender},
     protocol_handling::protocal_handling,
     command_handling::command_handling,
+    peers::update_peers,
 };
 
 use super::peers::PeerManager;
@@ -62,6 +63,13 @@ pub async fn start_network_server(
             )
             .await
             .expect("Error protocol handling")
+        }
+    });
+
+    tokio::spawn({
+        let peer_manager = Arc::clone(&peer_manager);
+        async{
+            update_peers(peer_manager).await
         }
     });
 

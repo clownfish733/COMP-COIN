@@ -188,6 +188,10 @@ pub async fn protocal_handling(
                                 warn!("Error sending message to: {}: {}", &peer, e);
                             }
                         }
+                        {
+                            let mut peer_manager_write = peer_manager.write().await;
+                            peer_manager_write.reset_tick(peer);
+                        }
                     }
 
                     Ok(NetMessage::Peers(peers)) => {

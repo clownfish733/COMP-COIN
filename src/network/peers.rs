@@ -1,5 +1,5 @@
 use tokio::{
-    sync::{mpsc}
+    sync::{mpsc, RwLock}
 };
 
 use anyhow::{Result, anyhow};
@@ -7,26 +7,38 @@ use anyhow::{Result, anyhow};
 use log::{warn};
 
 use std::{
-    net::SocketAddr,
     collections::{
         HashMap,
-        hash_map::Iter,
-    },
+        hash_map::{IterMut, Iter}
+    }, net::SocketAddr, sync::Arc,
 };
 
-use super::connection::{ 
-    ConnectionResponse
+use super::{
+    connection::ConnectionResponse,
+    protocol::NetMessage,
 };
 
 #[derive(Clone)]
 struct PeerInfo{
     tx: mpsc::Sender<ConnectionResponse>,
+    refresh_tick: usize,
 }
 
 impl PeerInfo{
     fn new(tx: mpsc::Sender<ConnectionResponse>) -> Self{
         Self { 
-            tx 
+            tx,
+            refresh_tick: 0,
+        }
+    }
+
+    fn check_ticker(&mut self) -> bool{
+        if self.refresh_tick == 3{
+            self.refresh_tick = 0;
+            return true
+        }else{
+            self.refresh_tick += 1;
+            return false
         }
     }
 }
@@ -60,8 +72,20 @@ impl PeerManager{
         self.0.contains_key(network_address)
     }
 
-    pub fn iter(&self) -> Iter<'_, SocketAddr, PeerInfo>{
+    fn iter_mut(&mut self) -> IterMut<'_, SocketAddr, PeerInfo>{
+        self.0.iter_mut()
+    }
+
+    fn iter(&self) -> Iter<'_, SocketAddr, PeerInfo>{
         self.0.iter()
+    }
+
+    pub fn reset_tick(&mut self, peer: SocketAddr){
+        if let Some(info) = self.0.get_mut(&peer){
+            info.refresh_tick = 0;
+        }else{
+            warn!("Tried to refresh tick for peer not in peer manager");
+        }
     }
 
     pub async fn send(
@@ -105,4 +129,24 @@ impl PeerManager{
         self.0.keys().cloned().collect()
     }
 
+}
+
+
+pub async fn update_peers(peer_manager: Arc<RwLock<PeerManager>>){
+    let response = ConnectionResponse::message(
+        NetMessage::GetPeers.to_bytes()
+    );
+    loop{
+        let peer_manager_clone = Arc::clone(&peer_manager);
+        let mut peer_manager_write_clone = peer_manager_clone.write().await;
+        for (peer, info) in peer_manager_write_clone.iter_mut(){
+            if info.check_ticker(){
+                let peer_manager_read = peer_manager.read().await;
+                if let Err(e) = peer_manager_read.send(peer, response.clone()).await{
+                    warn!("Error sending to : {}", peer);
+                }
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    }
 }
