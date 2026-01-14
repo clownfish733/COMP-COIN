@@ -64,7 +64,8 @@ impl UTXOS{
     }
 
     fn validate_confirmed_transaction(&self, tx: &Transaction) -> bool{
-        if !self.validate_scripts(&tx){return false}
+        if !self.validate_scripts(&tx){
+            warn!("1"); return false}
 
         self.get_input_value(tx.inputs.clone()) == UTXOS::get_output_value(tx.outputs.clone())
     }

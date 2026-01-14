@@ -94,7 +94,7 @@ impl Node{
     }
 
     pub async fn is_new_block(&self, block: &Block) -> bool{
-
+        info!("Adding new block");
         self.utxos.read().await.validate_block(&block, self.get_reward())
         && block.get_height() == self.get_next_height()
 

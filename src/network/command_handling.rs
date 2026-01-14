@@ -27,7 +27,11 @@ pub async fn command_handling(
     while let Some(command) = network_rx.recv().await{
         match command{
             NetworkCommand::Block(block) => {
-                if node.read().await.is_new_block(&block).await{
+                let is_new = {
+                    node.read().await.is_new_block(&block).await
+                };
+                
+                if is_new{
                     {
                         let mut node_writer = node.write().await;
                         node_writer.add_block(&block).await;

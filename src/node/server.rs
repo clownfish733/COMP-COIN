@@ -161,7 +161,7 @@ async fn full_node_main(node: Arc<RwLock<Node>>) -> Result<()>{
     mining_handle.await?;
     ui_save.store(true, Ordering::SeqCst);
     node.read().await.save().await?;
-    time::sleep(Duration::from_secs(1)).await;
+    time::sleep(Duration::from_millis(1500)).await;
     Ok(())
 }
 

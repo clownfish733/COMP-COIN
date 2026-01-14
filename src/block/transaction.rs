@@ -39,7 +39,7 @@ impl Transaction{
     }
 
     pub fn add_fee(&mut self, public_key: PublicKey, fee: usize){
-        self.outputs.push(TxOutput { 
+        self.outputs.insert(0, TxOutput { 
             value: fee, 
             locking_script: Script::P2PKHLocking(public_key.to_hash()) 
         })

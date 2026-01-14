@@ -1,4 +1,4 @@
-use log::warn;
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Hash)]
@@ -96,6 +96,7 @@ impl Script{
                     match public_key.verify_sig(sig_hash, signature){
                         true => stack.push(vec![1]),
                         false => {
+                            info!("1");
                             return false}
                     }
                 }
