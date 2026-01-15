@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use log::{info, warn, error, debug};
+use log::{info, warn, error};
 
 use tokio::{net::TcpStream, sync::{RwLock, mpsc}, time::timeout};
 
@@ -89,9 +89,8 @@ pub async fn command_handling(
                             );
 
                             tokio::spawn({
-                                let peer = peer.clone();
                                 async move {
-                                    connection_sender(writer, response_rx, peer)
+                                    connection_sender(writer, response_rx)
                                     .await
                                     .expect("Error connection sender")
                                 }

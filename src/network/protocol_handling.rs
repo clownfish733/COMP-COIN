@@ -30,6 +30,14 @@ pub async fn protocal_handling(
         match event.event{
             ConnectionType::Close => {
                 info!("Closed: {}", &peer);
+                let response = ConnectionResponse::close();
+                {
+                    let peer_manager_read = peer_manager.read().await;
+                    if let Err(e) = peer_manager_read.send(&peer, response).await{
+                        warn!("Error sending message to: {}: {}", &peer, e);
+                    }
+                }
+
                 let mut peer_manager_write = peer_manager.write().await;
                 peer_manager_write.remove(&peer);
             }

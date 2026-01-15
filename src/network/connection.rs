@@ -111,7 +111,6 @@ pub async fn connection_receiver(
 pub async fn connection_sender(
     mut writer: OwnedWriteHalf,
     mut response_rx: mpsc::Receiver<ConnectionResponse>,
-    peer: SocketAddr
 ) -> Result<()>{
     while let Some(response) = response_rx.recv().await{
         match response.response{

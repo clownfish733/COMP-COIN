@@ -1,11 +1,8 @@
 use COMP_COIN::start_server;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
-use std::{
-    env,
-    io::Write,
-};
+use std::io::Write;
 
 use log::LevelFilter;
 

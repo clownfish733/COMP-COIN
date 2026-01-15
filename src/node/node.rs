@@ -1,10 +1,11 @@
-const DIFFICULTY: usize = 3;
+const DIFFICULTY: usize = 4;
 
 const FILE_PATH: &str = "configs/node.json";
 
+#[allow(unused_imports)]
 use log::info;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Result};
 use serde::{Deserialize, Serialize};
 
 use std::{
@@ -94,7 +95,6 @@ impl Node{
     }
 
     pub async fn is_new_block(&self, block: &Block) -> bool{
-        info!("Adding new block");
         self.utxos.read().await.validate_block(&block, self.get_reward())
         && block.get_height() == self.get_next_height()
 
@@ -215,10 +215,11 @@ impl Config{
         self.local_ip
     }
 
+    /*
     pub fn get_global_ip(&self) -> IpAddr{
         self.global_ip
     }
-    
+    */
 }
 
 

@@ -6,7 +6,9 @@ use std::{
     sync::Arc,
 };
 
+#[allow(unused_imports)]
 use log::{info, warn};
+
 use serde::{Serialize, Deserialize}; 
 
 use anyhow::Result;
@@ -118,7 +120,7 @@ impl Mempool {
         let mut set = HashSet::new();
         for mut tx in transactions{
             tx.remove_fee();
-            set.remove(&TransactionWithFee::new(tx, 0));
+            set.insert(TransactionWithFee::new(tx, 0));
         }
         self.0.remove(set);
     }
@@ -142,7 +144,6 @@ impl Mempool {
         reward: usize,
         version: usize,
     ) -> Vec<Transaction>{
-        info!("getting next transaction");
         let mut txs = vec![Transaction::reward(reward, public_key.clone(), version)];
         let mut invalid_txs = Vec::new();
 
@@ -151,7 +152,6 @@ impl Mempool {
         while txs.len() < TRANSACTIONS_PER_BLOCK{
             let Some(TransactionWithFee{transaction: mut tx, fee}) = temp_mempool.pop() else{
                 temp_mempool.remove(invalid_txs);
-                info!("txs: {:?}", txs);
                 return txs
             };
 

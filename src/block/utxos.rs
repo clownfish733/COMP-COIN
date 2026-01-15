@@ -1,6 +1,8 @@
 use std::{collections::HashMap};
 
+#[allow(unused_imports)]
 use log::{info, warn};
+
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -31,6 +33,7 @@ impl UTXOS{
     }
 
     fn add_transaction(&mut self, tx: Transaction){
+         
         let hash = tx.get_hash();
 
         for input in tx.inputs{
@@ -64,15 +67,16 @@ impl UTXOS{
     }
 
     fn validate_confirmed_transaction(&self, tx: &Transaction) -> bool{
-        if !self.validate_scripts(&tx){
-            warn!("1"); return false}
+        let mut tx_clone = tx.clone();
+        tx_clone.remove_fee();
+        if !self.validate_scripts(&tx_clone){
+            return false}
 
         self.get_input_value(tx.inputs.clone()) == UTXOS::get_output_value(tx.outputs.clone())
     }
 
     pub fn validate_pending_transaction(&self, tx: &Transaction) -> bool{
         if !self.validate_scripts(&tx){
-            tx.debug();
             warn!("Invalid script");
             return false
         }
@@ -113,7 +117,7 @@ impl UTXOS{
 
         for tx in &block.get_transactions()[1..]{
             if !self.validate_confirmed_transaction(tx){
-                warn!("Invalid transction");
+                warn!("Invalid transaction");
                 return false
             }
         }

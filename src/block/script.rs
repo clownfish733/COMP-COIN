@@ -1,8 +1,7 @@
+#[allow(unused_imports)]
 use log::{info, warn};
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash)]
-pub struct Script(Vec<OpCode>);
+use serde::{Deserialize, Serialize};
 
 use crate::utils::sha256;
 
@@ -10,6 +9,9 @@ use super::{
     transaction::{Transaction, TxOutput},
     keys::PublicKey,
 };
+
+#[derive(Serialize, Deserialize, Clone, Debug, Hash)]
+pub struct Script(Vec<OpCode>);
 
 #[derive(Serialize, Deserialize, Clone, Debug, Hash)]
 enum OpCode{
@@ -96,7 +98,6 @@ impl Script{
                     match public_key.verify_sig(sig_hash, signature){
                         true => stack.push(vec![1]),
                         false => {
-                            info!("1");
                             return false}
                     }
                 }

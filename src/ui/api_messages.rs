@@ -60,12 +60,11 @@ pub struct TransactionRequest{
 impl TransactionRequest{
     pub fn log(&self){
         info!("New Transaction requested");
-        info!("\tRecipients");
+        info!("\tRecipients:");
         for (recipient, value) in self.recipients.iter(){
             info!("\t\t{}:{}",recipient, value);
         }
-        info!("\tFee");
-        info!("{}", self.fee);
+        info!("\tFee:{}", self.fee);
     }
 
     pub fn calculate_total_spend(&self) -> usize{

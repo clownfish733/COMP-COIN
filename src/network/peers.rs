@@ -64,7 +64,7 @@ impl PeerManager{
         self.0.remove(network_address);
     }
 
-    pub fn get(&self, network_address: &SocketAddr) -> Option<PeerInfo>{
+    fn get(&self, network_address: &SocketAddr) -> Option<PeerInfo>{
         self.0.get(network_address).cloned()
     }
 
@@ -131,7 +131,7 @@ impl PeerManager{
 
 }
 
-
+#[allow(unused)]
 pub async fn update_peers(peer_manager: Arc<RwLock<PeerManager>>){
     let response = ConnectionResponse::message(
         NetMessage::GetPeers.to_bytes()

@@ -46,7 +46,7 @@ impl Transaction{
     }
 
     pub fn remove_fee(&mut self){
-        self.outputs.pop();
+        self.outputs.remove(0);
     }
 
     pub fn debug(&self){

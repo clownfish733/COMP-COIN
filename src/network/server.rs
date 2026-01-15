@@ -23,7 +23,6 @@ use super::{
     connection::{ConnectionEvent,ConnectionResponse, connection_receiver, connection_sender},
     protocol_handling::protocal_handling,
     command_handling::command_handling,
-    peers::update_peers,
 };
 
 use super::peers::PeerManager;
@@ -118,9 +117,8 @@ pub async fn start_network_server(
         });
 
         tokio::spawn({
-            let peer = network_address.clone();
             async move {
-                connection_sender(writer, response_rx, peer)
+                connection_sender(writer, response_rx)
                 .await
                 .expect("Error connection sender")
             }

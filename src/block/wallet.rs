@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use log::warn;
+#[allow(unused_imports)]
+use log::{info, warn};
+
 use serde::{Deserialize, Serialize};
 
 use super::{
