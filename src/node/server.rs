@@ -26,7 +26,7 @@ use std::{sync::{
     }, time::Duration};
 
 const BOOTSTRAP_PORT: usize = 8333;
-const BOOTSTRAP_ADDR: &str = "192.168.1.152";
+const BOOTSTRAP_ADDR: &str = "192.168.1.150";
 
 async fn bootstrap_node_main(node: Arc<RwLock<Node>>) -> Result<()>{
     info!("Starting Bootstrap Node");
