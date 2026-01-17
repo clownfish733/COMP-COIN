@@ -1,4 +1,4 @@
-const DIFFICULTY: usize = 3;
+const DIFFICULTY: usize = 2;
 
 const FILE_PATH: &str = "configs/node.json";
 
