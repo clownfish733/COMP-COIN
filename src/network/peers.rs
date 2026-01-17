@@ -131,7 +131,7 @@ impl PeerManager{
 
 }
 
-#[allow(unused)]
+
 pub async fn update_peers(peer_manager: Arc<RwLock<PeerManager>>){
     let response = ConnectionResponse::message(
         NetMessage::GetPeers.to_bytes()
@@ -162,3 +162,4 @@ pub async fn update_peers(peer_manager: Arc<RwLock<PeerManager>>){
         tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     }
 }
+
