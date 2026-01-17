@@ -4,7 +4,7 @@ use tokio::{
 
 use anyhow::{Result, anyhow};
 
-use log::{warn};
+use log::{info, warn};
 
 use std::{
     collections::{
@@ -155,7 +155,7 @@ pub async fn update_peers(peer_manager: Arc<RwLock<PeerManager>>){
         for peer in peers_to_update {
             let pm = peer_manager.read().await;
             if let Err(e) = pm.send(&peer, response.clone()).await {
-                warn!("Error sending to: {}", peer);
+                warn!("Error sending to: {}: {}", peer, e);
             }
         }
         
